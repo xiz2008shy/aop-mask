@@ -3,6 +3,7 @@ package com.tomqi.demo;
 import com.tomqi.aop_mask.annotation.Masking;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -19,8 +20,8 @@ public class DemoController {
 
     @Masking
     @RequestMapping("world")
-    public ResponseEntity<String> hello(){
-        return ResponseEntity.ok("hello world");
+    public ResponseEntity<String> hello(@RequestParam("input") String input){
+        return ResponseEntity.ok(input);
     }
 
 
