@@ -15,6 +15,6 @@ import java.lang.annotation.*;
 @Component
 public @interface MaskOn {
 
-    String value() default "";
+    String value();
 
 }

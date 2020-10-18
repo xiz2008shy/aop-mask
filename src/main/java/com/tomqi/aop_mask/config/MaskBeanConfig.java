@@ -4,6 +4,7 @@ import com.tomqi.aop_mask.container.MValidatorHandlerContainer;
 import com.tomqi.aop_mask.container.MaskContainer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
 
 /**
@@ -13,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
  */
 
 @Configuration
+@EnableAspectJAutoProxy
 public class MaskBeanConfig {
 
     @Bean(initMethod = "initContainer")
