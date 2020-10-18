@@ -74,7 +74,7 @@ public class MaskContainer {
             mask = this.maskSuffixNameMap.get(key.concat(MASKING_SUFFIX));
         }
         if (Objects.isNull(mask)) {
-            throw new NonMaskException("",key);
+            throw new NonMaskException(key);
         }
         return mask;
     }
