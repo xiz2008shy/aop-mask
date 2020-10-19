@@ -1,6 +1,6 @@
 package com.tomqi.aop_mask.pojo;
 
-import com.tomqi.aop_mask.annotation.MaskMethod;
+import com.tomqi.aop_mask.annotation.TimeNode;
 import java.lang.reflect.Method;
 
 /**
@@ -60,7 +60,7 @@ public class MaskMethodInfo {
         this.afterPostMethod = afterPostMethod;
     }
 
-    public void setMethod(Method method, MaskMethod.TimeNode type) {
+    public void setMethod(Method method, TimeNode type) {
         switch (type) {
             case HANDLE:
                 this.processMethod = method;
@@ -82,7 +82,7 @@ public class MaskMethodInfo {
         }
     }
 
-    public static MaskMethodInfo createMethodInfo(Method method, MaskMethod.TimeNode type) {
+    public static MaskMethodInfo createMethodInfo(Method method, TimeNode type) {
         MaskMethodInfo info = new MaskMethodInfo();
         info.setMethod(method,type);
         return info;

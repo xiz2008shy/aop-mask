@@ -2,6 +2,7 @@ package com.tomqi.demo.orgin_impl;
 
 import com.tomqi.aop_mask.annotation.MaskMethod;
 import com.tomqi.aop_mask.annotation.MaskOn;
+import com.tomqi.aop_mask.annotation.TimeNode;
 import com.tomqi.aop_mask.mask_core.AbstractDefaultDataMask;
 import com.tomqi.aop_mask.pojo.MaskMessage;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +18,7 @@ import org.springframework.http.ResponseEntity;
 public class TestMask extends AbstractDefaultDataMask {
 
 
-    @MaskMethod(methodName = "hello",timing = MaskMethod.TimeNode.PRE_HANDLE)
+    @MaskMethod(methodName = "hello",timing = TimeNode.PRE_HANDLE)
     public void timingHandleDetail0(MaskMessage message) {
         String input = message.getMethodArgByIndex(0);
         message.setMethodArgByIndex(input+"\t[beforeHandle]",0);

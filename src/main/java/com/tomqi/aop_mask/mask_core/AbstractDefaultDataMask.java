@@ -1,6 +1,7 @@
 package com.tomqi.aop_mask.mask_core;
 
 import com.tomqi.aop_mask.annotation.MaskMethod;
+import com.tomqi.aop_mask.annotation.TimeNode;
 import com.tomqi.aop_mask.pojo.MaskMessage;
 import com.tomqi.aop_mask.pojo.MaskMethodInfo;
 import com.tomqi.aop_mask.utils.MaskContext;
@@ -116,7 +117,7 @@ public abstract class AbstractDefaultDataMask implements DataMask {
                 if (method.isAnnotationPresent(MaskMethod.class)) {
                     MaskMethod annotation = AnnotationUtils.findAnnotation(method,MaskMethod.class);
                     String methodName = annotation.value();
-                    MaskMethod.TimeNode timeNode = annotation.timing();
+                    TimeNode timeNode = annotation.timing();
                     MaskMethodInfo info = curMethodMap.get(methodName);
                     if (Objects.nonNull(info)){
                         info.setMethod(method, timeNode);
