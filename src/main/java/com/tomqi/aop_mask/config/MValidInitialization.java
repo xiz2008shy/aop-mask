@@ -7,6 +7,8 @@ import com.tomqi.aop_mask.container.MValidatorHandlerContainer;
 import com.tomqi.aop_mask.validation.core.AbstractMaskValidator;
 import com.tomqi.aop_mask.validation.core.MValidatorHandler;
 import org.apache.commons.lang3.ArrayUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
@@ -27,6 +29,8 @@ import java.util.Objects;
  **/
 @Component
 public class MValidInitialization implements ApplicationListener<ContextRefreshedEvent> {
+
+    private static final Logger log = LoggerFactory.getLogger(MValidInitialization.class);
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -88,7 +92,7 @@ public class MValidInitialization implements ApplicationListener<ContextRefreshe
             Map<String,Object> maskInfo = (Map<String,Object>)memberValues.get(invocationHandler);
             maskInfo.put("id",key);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.info("createMaskingId Exception",e);
         }
     }
 
@@ -106,7 +110,7 @@ public class MValidInitialization implements ApplicationListener<ContextRefreshe
                 AbstractMaskValidator validator = constructor.newInstance(value);
                 handler.addValidator(validator);
             } catch (Exception e) {
-                e.printStackTrace();
+                log.info("createValidatorHandler Exception",e);
             }
         }
         return handler;
