@@ -79,7 +79,7 @@ public class AssistDemo {
      * @return
      * @throws IOException
      */
-    private static String rootPath() throws IOException {
+    public static String rootPath() {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         URL resource = classLoader.getResource("");
         return resource.getPath();
