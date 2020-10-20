@@ -3,6 +3,9 @@ package com.tomqi.aop_mask.mask_core;
 import com.tomqi.aop_mask.annotation.MTiming;
 import com.tomqi.aop_mask.annotation.TimeNode;
 import com.tomqi.aop_mask.pojo.MaskMessage;
+import com.tomqi.aop_mask.utils.MaskContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author TOMQI
@@ -12,6 +15,8 @@ import com.tomqi.aop_mask.pojo.MaskMessage;
  * @data 2020/10/1822:42
  **/
 public class FastDataMaskTemplate implements DataMask {
+
+    private static final Logger log = LoggerFactory.getLogger(FastDataMaskTemplate.class);
 
     @MTiming(TimeNode.BEFORE_PRE_HANDLE )
     public void beforePreHandle(MaskMessage message) {
@@ -23,6 +28,15 @@ public class FastDataMaskTemplate implements DataMask {
 
     @MTiming(TimeNode.HANDLE )
     public void handle(MaskMessage message) {
+        message.setJoinPoint(MaskContext.getPoint());
+        Object proceed = null;
+        try {
+            proceed = message.proceed();
+        } catch (Throwable throwable) {
+            log.info("PRO AbstractDefaultDataMasking-defaultHandle方法执行异常!",throwable);
+        }
+        message.setResult(proceed);
+        message.setJoinPoint(null);
     }
 
     @MTiming(TimeNode.POST_HANDLE )
@@ -37,4 +51,5 @@ public class FastDataMaskTemplate implements DataMask {
     public Object maskData(MaskMessage message) {
         return null;
     }
+
 }

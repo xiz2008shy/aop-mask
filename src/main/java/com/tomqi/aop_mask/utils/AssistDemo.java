@@ -72,6 +72,7 @@ public class AssistDemo {
         Method method = clazz.getDeclaredMethod("createMask");
         Object res = method.invoke(null, null);
         System.out.println(res.toString());
+
     }
 
     /**
