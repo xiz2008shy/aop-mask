@@ -35,10 +35,8 @@ public class MValidInitialization implements ApplicationListener<ContextRefreshe
     public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent) {
         Map<String, Object> mvcMap = applicationContext.getBeansWithAnnotation(MValid.class);
         MValidatorHandlerContainer validations = applicationContext.getBean("validations", MValidatorHandlerContainer.class);
-        if (Objects.isNull(validations)) {
-            return;
-        }
-        if (mvcMap != null && !mvcMap.isEmpty()) {
+
+        if (!mvcMap.isEmpty()) {
             mvcMap.forEach((beanName, bean) -> processValidator(bean,validations,mvcMap));
         }
 
@@ -46,7 +44,7 @@ public class MValidInitialization implements ApplicationListener<ContextRefreshe
         ApplicationContext applicationContextParent = applicationContext.getParent();
         if (Objects.nonNull(applicationContextParent)) {
             Map<String, Object> parentMap = applicationContextParent.getBeansWithAnnotation(MValid.class);
-            if (parentMap != null && !parentMap.isEmpty()){
+            if (!parentMap.isEmpty()){
                 parentMap.forEach((beanName, bean) -> processValidator(bean,validations,parentMap));
             }
         }
