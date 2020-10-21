@@ -1,7 +1,7 @@
-package com.tomqi.aop_mask.utils;
+package com.tomqi.demo.test;
 
 import com.tomqi.aop_mask.mask_core.FastDataMaskTemplate;
-import com.tomqi.demo.orgin_impl.FastMask;
+import com.tomqi.demo.orgin_impl.TemplateTest;
 import javassist.*;
 
 
@@ -15,7 +15,7 @@ import javassist.*;
 public class AssistUtils {
 
     public static void main(String[] args) throws Exception {
-        Class<?> aClass = rewriteMaskTemplate(FastMask.class);
+        Class<?> aClass = rewriteMaskTemplate(TemplateTest.class);
         System.out.println(aClass.getName());
     }
 
@@ -31,11 +31,6 @@ public class AssistUtils {
         if ( originClazz !=null ) {
             newClazz = pool.makeClass("com.tomqi.aop_mask.remark." + clazz.getSimpleName().concat("_Re"),originClazz);
         }
-
-        /*CtMethod[] methods = newClazz.getMethods();
-        for (CtMethod method : methods){
-            System.out.println(method.getName());
-        }*/
 
         CtMethod maskData = newClazz.getMethod("maskData","(Lcom/tomqi/aop_mask/pojo/MaskMessage;)Ljava/lang/Object;");
         maskData.setBody("{System.out.println(\"hello\");\nreturn null;}");

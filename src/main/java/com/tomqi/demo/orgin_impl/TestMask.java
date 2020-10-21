@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
  * @Description :一个mask策略的示例，对DemoController类的hello方法进行修饰。
  * @data 2020/10/1821:27
  **/
-//@MaskOn("DemoController")
+@MaskOn("DemoController")
 public class TestMask extends AbstractDefaultDataMask {
 
 

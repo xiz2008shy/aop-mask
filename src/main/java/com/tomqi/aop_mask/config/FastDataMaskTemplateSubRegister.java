@@ -8,25 +8,11 @@ import javassist.*;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.*;
-import org.springframework.boot.autoconfigure.AutoConfigurationPackages;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.ResourceLoaderAware;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternUtils;
-import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
-import org.springframework.core.type.classreading.MetadataReader;
-import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.util.ClassUtils;
-import java.io.IOException;
-import java.lang.annotation.Annotation;
+import org.springframework.util.StringUtils;
+
 import java.lang.reflect.Method;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 
@@ -38,13 +24,12 @@ import java.util.Set;
  * @data 2020/10/1823:59
  **/
 @Component
-public class FastTemplateRegister implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
-
-    private ApplicationContext applicationContext;
+public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPostProcessor {
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        Set<Class<?>> classes = ClassScanner.scannerAll();
+
+        Set<Class<?>> classes = ClassScanner.scannerAll(FastDataMaskTemplate.class);
         for (Class<?> clazz :classes) {
             ClassPool pool = new ClassPool();
             pool.insertClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));
@@ -53,15 +38,19 @@ public class FastTemplateRegister implements BeanDefinitionRegistryPostProcessor
                 CtClass $Re = pool.makeClass("com.tomqi.aop_mask.remark." + clazz.getSimpleName().concat("$Re"),ctClass);
                 CtMethod oPostHandle = ctClass.getDeclaredMethod("postHandle");
                 CtMethod postHandle = CtNewMethod.copy(oPostHandle, "postHandle", $Re,null);
-                postHandle.setBody("{System.out.println(\"hello\");}");
+                postHandle.setBody("{System.out.println(\"GO GO GO!\");}");
                 $Re.addMethod(postHandle);
                 ctClass.writeFile();
 
-                Class<?> aClass = $Re.toClass();
-                Method postHandle1 = aClass.getDeclaredMethod("postHandle", MaskMessage.class);
+                Class<?> $clazz = $Re.toClass();
+                Method postHandle1 = $clazz.getDeclaredMethod("postHandle", MaskMessage.class);
                 MaskMethod ann = AnnotationUtils.findAnnotation(postHandle1, MaskMethod.class);
                 System.out.println(ann);
                 System.out.println(ann.value());
+                BeanDefinitionBuilder $beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition($clazz);
+                GenericBeanDefinition beanDefinition = (GenericBeanDefinition)$beanDefinitionBuilder.getBeanDefinition();
+                String simpleName = clazz.getSimpleName();
+                registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -74,8 +63,5 @@ public class FastTemplateRegister implements BeanDefinitionRegistryPostProcessor
 
     }
 
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
-    }
+
 }

@@ -13,7 +13,6 @@ import com.tomqi.aop_mask.pojo.MaskMessage;
  * @Description :TODO
  * @data 2020/10/190:31
  **/
-@MaskOn("DemoController")
 public class TemplateTest extends FastDataMaskTemplate {
 
     @MaskMethod("hello")
