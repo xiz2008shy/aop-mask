@@ -11,14 +11,20 @@ package com.tomqi.aop_mask.annotation;
 
 
 public enum TimeNode {
+
     //前置处理前
-    BEFORE_PRE_HANDLE,
+    BEFORE_PRE_HANDLE(0),
     //前置处理
-    PRE_HANDLE,
+    PRE_HANDLE(1),
     //process处理
-    HANDLE,
+    HANDLE(2),
     //后置处理
-    POST_HANDLE,
+    POST_HANDLE(3),
     //后置处理后
-    AFTER_POST_HANDLE
+    AFTER_POST_HANDLE(4);
+
+    private int value;
+    TimeNode(int value) {
+        this.value = value;
+    }
 }

@@ -1,10 +1,13 @@
 package com.tomqi.aop_mask.config;
 
 import com.tomqi.aop_mask.annotation.MaskMethod;
+import com.tomqi.aop_mask.annotation.TimeNode;
 import com.tomqi.aop_mask.mask_core.FastDataMaskTemplate;
 import com.tomqi.aop_mask.pojo.MaskMessage;
 import com.tomqi.aop_mask.utils.ClassScanner;
 import javassist.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.*;
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -25,6 +29,8 @@ import java.util.Set;
  **/
 @Component
 public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPostProcessor {
+
+    private static final Logger log = LoggerFactory.getLogger(FastDataMaskTemplateSubRegister.class);
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
@@ -52,10 +58,33 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
                 String simpleName = clazz.getSimpleName();
                 registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);
             } catch (Exception e) {
-                e.printStackTrace();
+                log.info("FastDataMaskTemplate子类加载错误!",e);
             }
-
         }
+    }
+
+    private class MethodNode {
+        String methodName;
+        TimeNode timing;
+        int order;
+        String maskMethodName;
+    }
+
+    private class HandleTiming {
+        MethodNode methodNode;
+        TimeNode timeNode = this.methodNode.timing;
+    }
+
+    private class originMethod {
+        String originMName;
+        handleTiming;
+    }
+
+    private static class Entry {
+        TimeNode[] timeNode = {TimeNode.BEFORE_PRE_HANDLE,TimeNode.PRE_HANDLE,TimeNode.HANDLE,TimeNode.POST_HANDLE,TimeNode.AFTER_POST_HANDLE};
+
+
+
     }
 
     @Override
