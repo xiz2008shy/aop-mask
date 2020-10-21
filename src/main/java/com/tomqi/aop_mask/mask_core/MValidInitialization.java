@@ -1,4 +1,4 @@
-package com.tomqi.aop_mask.config;
+package com.tomqi.aop_mask.mask_core;
 
 import com.tomqi.aop_mask.annotation.MValid;
 import com.tomqi.aop_mask.annotation.Masking;

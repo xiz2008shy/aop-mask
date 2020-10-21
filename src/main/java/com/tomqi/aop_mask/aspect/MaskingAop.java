@@ -45,7 +45,7 @@ public class MaskingAop {
                 MValidatorHandler handler = validations.getHandler(message.getMasking().id());
                 MValidatorResult validResult = handler.valid(message.getMethodArgs(), null);
                 if(!validResult.isPass()){
-                    throw new MValidationException(validResult.getMessage());
+                    throw new MValidationException(validResult.getMessage(),joinPoint.getSignature().getDeclaringTypeName(),message.getMethodName());
                 }
             }
 

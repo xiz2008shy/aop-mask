@@ -18,4 +18,10 @@ import java.lang.annotation.*;
 public @interface MTiming {
 
     TimeNode value() default TimeNode.POST_HANDLE;
+
+    /**
+     * 用于指定修饰同一方法，同一节点的先后执行顺序，数字小的优先执行，相同大小不能保证执行顺序。
+     * @return
+     */
+    int order () default 0;
 }
