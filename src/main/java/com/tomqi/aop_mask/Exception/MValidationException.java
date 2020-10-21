@@ -9,8 +9,22 @@ package com.tomqi.aop_mask.Exception;
  **/
 public class MValidationException extends RuntimeException {
 
-    public MValidationException(String tips) {
-        super(tips);
+    private final String clazzName;
+
+    private final String methodName;
+
+    public MValidationException(String message,String clazzName,String methodName) {
+        super(message);
+        this.clazzName = clazzName;
+        this.methodName = methodName;
+    }
+
+    public String getClazzName() {
+        return clazzName;
+    }
+
+    public String getMethodName() {
+        return methodName;
     }
 
 }
