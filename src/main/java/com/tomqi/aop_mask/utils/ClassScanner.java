@@ -1,6 +1,5 @@
 package com.tomqi.aop_mask.utils;
 
-import com.tomqi.aop_mask.mask_core.FastDataMaskTemplate;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -18,37 +17,42 @@ public class ClassScanner {
 
     private ClassScanner(){}
 
-    public static Set<Class<?>> scannerAll(){
+    /**
+     * 项目类路径下，查找特定类的所有子类或实现类
+     * @param filterClass 指定的特定类
+     * @return
+     */
+    public static Set<Class<?>> scannerAll(Class<?> filterClass){
         String rootPath = rootPath();
         File rootDir = new File(rootPath);
         Set<Class<?>> clazzSet = new HashSet<>();
         if (!rootDir.isDirectory()){
             return clazzSet;
         }
-        doScanner(rootDir,clazzSet,rootPath);
+        doScanner(rootDir,clazzSet,rootPath,filterClass);
         return clazzSet;
     }
 
-    private static void doScanner(File dir,Set<Class<?>> set,String rootPath){
+    private static void doScanner(File dir,Set<Class<?>> set,String rootPath,Class<?> filterClass){
         dir.listFiles(file->{
             if (file.getName().endsWith(".class")){
-                clazzAddSet(file,set,rootPath);
+                clazzAddSet(file,set,rootPath,filterClass);
             }else if(file.isDirectory()) {
-                doScanner(file,set,rootPath);
+                doScanner(file,set,rootPath,filterClass);
             }
             return false;
         });
 
     }
 
-    public static void clazzAddSet (File file,Set<Class<?>> set,String rootPath){
+    public static void clazzAddSet (File file,Set<Class<?>> set,String rootPath,Class<?> filterClass){
         String absolutePath = file.getAbsolutePath();
         absolutePath = absolutePath.substring(rootPath.length()-1,absolutePath.lastIndexOf("."));
         String fullName = absolutePath.replace(File.separator,".");
 
         try {
             Class<?> clazz = Class.forName(fullName);
-            if (FastDataMaskTemplate.class.isAssignableFrom(clazz) && !clazz.equals(FastDataMaskTemplate.class)){
+            if (filterClass.isAssignableFrom(clazz) && !clazz.equals(filterClass)){
                 set.add(clazz);
             }
         } catch (ClassNotFoundException e) {
