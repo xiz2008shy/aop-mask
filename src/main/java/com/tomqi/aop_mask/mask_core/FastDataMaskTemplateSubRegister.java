@@ -13,7 +13,6 @@ import org.springframework.beans.factory.support.*;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,6 +59,9 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
         }
     }
 
+    /**
+     * MethodNode-方法中的重要信息用此对象封装
+     */
     private static class MethodNode {
         String methodName;
         int order;
@@ -71,6 +73,9 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
         }
     }
 
+    /**
+     * HandleTimingContainer-保存某个Mask节点的MethodNode数组
+     */
     private class HandleTimingContainer {
         private MethodNode[] methodNodes;
 
@@ -97,7 +102,7 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
 
         private void insertRightWay(MethodNode node){
             MethodNode innerNode = this.methodNodes[this.length];
-            if (innerNode.order < node.order){
+            if (innerNode.order <= node.order){
                 this.methodNodes[this.length + 1] = node;
             }else {
                 int index = this.length;
@@ -114,15 +119,17 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
 
         private void expandArray(){
             int size = this.methodNodes.length;
-            MethodNode[] newArray = new MethodNode[size + 5];
+            MethodNode[] nodes = new MethodNode[size + 5];
             for (int i = 0; i < size; i++) {
-                newArray[i] = this.methodNodes[i];
+                nodes[i] = this.methodNodes[i];
             }
         }
     }
 
     /**
-     * 用于建立FastMaskTemplate重构类中重要数据的收集。
+     * ConversionMethodMap-用于建立FastMaskTemplate重构类与mask方法相关的信息。
+     * 内部维护一个map集合，每个value对应length为5的HandleTimingContainer数组，与五个Mask节点的value值一一对应。
+     * @see com.tomqi.aop_mask.annotation.TimeNode
      */
     private class ConversionMethodMap {
 
@@ -130,6 +137,7 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
 
         protected void putMethod (Method method) {
             MaskMethod maskMethodAnn = AnnotationUtils.findAnnotation(method, MaskMethod.class);
+            // 没有@MaskMethod注解的方法，不处理
             if (maskMethodAnn == null){
                 return;
             }
@@ -137,13 +145,17 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
             MTiming mTimingAnn = AnnotationUtils.findAnnotation(method, MTiming.class);
             TimeNode timing = maskMethodAnn.timing();
             int order = maskMethodAnn.order();
+            // 如果存在@MTiming注解，则的@MTiming注解的属性为准
             if (mTimingAnn != null) {
                 timing = mTimingAnn.value();
                 order = mTimingAnn.order();
             }
-            HandleTimingContainer[] timingContainers = originMethodNameMap.get(originMethodName);
             int timingContainersIndex = timing.getValue();
             MethodNode methodNode = MethodNode.convertToNode(method.getName(), order);
+
+            //尝试先获取HandleTimingContainer[]，如果为null表示原方法没有添加过相关信息
+            HandleTimingContainer[] timingContainers = originMethodNameMap.get(originMethodName);
+
             if ( timingContainers == null ) {
                 timingContainers = new HandleTimingContainer[5];
                 timingContainers[timingContainersIndex] = new HandleTimingContainer();
@@ -153,7 +165,6 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
             }
 
             timingContainers[timingContainersIndex].addMethodNode(methodNode);
-
         }
     }
 

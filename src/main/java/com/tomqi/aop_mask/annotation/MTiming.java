@@ -6,8 +6,8 @@ import java.lang.annotation.*;
  * @author TOMQI
  * @Title: MTiming
  * @ProjectName: aop_mask
- * @Description :该注解作用与@MaskMethod中timing属性含义相同，但该注解仅适用于FastDataMaskTemplate，用于该类的便利性，
- * 日常使用中完全可以使用@MaskMethod进行代替。
+ * @Description :该注解作用与@MaskMethod中timing属性含义相同，但该注解拥有更高的优先权，该注解与@MaskMethod同时存在时，采用该注解的属性值。
+ * 另外该注解暂不适用于AbstractDefaultDataMask的子类
  * @data 2020/10/1822:51
  **/
 
