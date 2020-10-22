@@ -28,7 +28,6 @@ public class FastDataMaskTemplate implements DataMask {
 
     @MTiming(TimeNode.HANDLE )
     public void handle(MaskMessage message) {
-        message.setJoinPoint(MaskContext.getPoint());
         Object proceed = null;
         try {
             proceed = message.proceed();
@@ -36,7 +35,6 @@ public class FastDataMaskTemplate implements DataMask {
             log.info("PRO AbstractDefaultDataMasking-defaultHandle方法执行异常!",throwable);
         }
         message.setResult(proceed);
-        message.setJoinPoint(null);
     }
 
     @MTiming(TimeNode.POST_HANDLE )
