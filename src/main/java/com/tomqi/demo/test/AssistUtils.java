@@ -15,8 +15,8 @@ import javassist.*;
 public class AssistUtils {
 
     public static void main(String[] args) throws Exception {
-        Class<?> aClass = rewriteMaskTemplate(TemplateTest.class);
-        System.out.println(aClass.getName());
+        Object[] objectArr = new Object[16];
+        System.out.println(objectArr.length);
     }
 
     public static Class<?> rewriteMaskTemplate(Class<? extends FastDataMaskTemplate> clazz) throws Exception {

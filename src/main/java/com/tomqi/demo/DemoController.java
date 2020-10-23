@@ -26,7 +26,17 @@ public class DemoController {
     @Masking
     @RequestMapping("world")
     public ResponseEntity<String> hello(@RequestParam("input") String input){
-        templateTest.postHandle(null);
+        templateTest.maskData(null);
+        System.out.println("hello [Handle]--->执行!");
+        return ResponseEntity.ok(input);
+    }
+
+
+    @Masking
+    @RequestMapping("fast")
+    public ResponseEntity<String> fast(@RequestParam("input") String input){
+        templateTest.maskData(null);
+        System.out.println("fast [Handle]--->执行!");
         return ResponseEntity.ok(input);
     }
 
