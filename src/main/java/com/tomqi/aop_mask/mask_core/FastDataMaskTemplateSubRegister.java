@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,47 +51,23 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
             pool.insertClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));
             try {
                 CtClass ctClass = pool.get(clazz.getName());
-                CtClass $mask = pool.makeClass(NEW_CLASS_PACKAGE + clazz.getSimpleName().concat(NEW_CLASS_SUFFIX),
-                        ctClass);
-                CtMethod maskData = new CtMethod(CtClass.voidType, CORE_METHOD_NAME, new CtClass[] { pool.get(MASK_MESSAGE) }, $mask);
+                CtClass assistCreateClazz = pool
+                        .makeClass(NEW_CLASS_PACKAGE + clazz.getSimpleName().concat(NEW_CLASS_SUFFIX), ctClass);
+                CtMethod maskData = new CtMethod(CtClass.voidType, CORE_METHOD_NAME,
+                        new CtClass[] { pool.get(MASK_MESSAGE) }, assistCreateClazz);
 
                 StringBuilder methodText = new StringBuilder();
-                if (originMethodNames.isEmpty()) {
-                    return;
-                }
+                //这里写入maskData的具体的执行代码
+                MaskClazzCreater.methodBodyCreate(originMethodNames,methodText,collector);
 
-                if (originMethodNames.size() == 1) {
-                    Iterator<String> iterator = originMethodNames.iterator();
-                    String methodName = iterator.next();
-                    while (collector.hasNextNode(methodName)) {
-                        MethodNode node = collector.nextNode();
-                        methodText.append(node.methodName);
-                        methodText.append("($1);\n");
-                    }
-                } else {
-                    methodText.append("String methodName = message.simpleClassName();\n");
-                    methodText.append("Switch(methodName){\n");
-                    for (String name:originMethodNames) {
-                        methodText.append("case(");
-                        methodText.append(name);
-                        methodText.append("){");
-                        while (collector.hasNextNode(name)) {
-                            MethodNode node = collector.nextNode();
-                            methodText.append(node.methodName);
-                            methodText.append("($1);\n");
-                        }
-                        methodText.append("}");
-                    }
-                }
                 maskData.setBody(methodText.toString());
-                $mask.addMethod(maskData);
-                $mask.writeFile();
+                assistCreateClazz.addMethod(maskData);
+                assistCreateClazz.writeFile();
 
-                Class<?> $clazz = $mask.toClass();
+                Class<?> assistClazz = assistCreateClazz.toClass();
 
-                BeanDefinitionBuilder $beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition($clazz);
-                GenericBeanDefinition beanDefinition = (GenericBeanDefinition) $beanDefinitionBuilder
-                        .getBeanDefinition();
+                BeanDefinitionBuilder maskBDBuilder = BeanDefinitionBuilder.genericBeanDefinition(assistClazz);
+                GenericBeanDefinition beanDefinition = (GenericBeanDefinition) maskBDBuilder.getBeanDefinition();
                 String simpleName = clazz.getSimpleName();
                 registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);
             } catch (Exception e) {
@@ -179,6 +154,21 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
         }
     }
 
+    private class TimingContainer {
+        private HandleTimingContainer[] containers       = new HandleTimingContainer[5];
+        /**
+         * 判断当前template是否重写过handle节点
+         */
+        private boolean                 hasHandleTiming  = false;
+
+        /**
+         * 代表当前template的handle节点是否被处理过
+         */
+        private boolean                 handleAfter      = false;
+
+        private int                     handleNodeLength = 0;
+    }
+
     /**
      * ConversionMethodMap-用于建立FastMaskTemplate重构类与mask方法相关的信息。
      * 内部维护一个map集合，每个value对应length为5的HandleTimingContainer数组，与五个Mask节点的value值一一对应。
@@ -187,13 +177,15 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
      */
     class ConversionMethodCollector {
 
-        private Map<String, HandleTimingContainer[]> originMethodNameMap = new HashMap<>();
+        private Map<String, TimingContainer> originMethodNameMap = new HashMap<>();
 
-        private int                                  curTiming           = 0;
+        protected int                          curTiming           = 0;
 
-        private int                                  curNodeIndex        = 0;
+        protected int                          curNodeIndex        = 0;
 
-        private String                               curMethod           = "";
+        protected String                       curMethod           = "";
+
+        protected TimingContainer              curContainer;
 
         protected void putMethod(Method method) {
             MaskMethod maskMethodAnn = AnnotationUtils.findAnnotation(method, MaskMethod.class);
@@ -210,27 +202,40 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
                 timing = mTimingAnn.value();
                 order = mTimingAnn.order();
             }
+
             int timingContainersIndex = timing.getValue();
             MethodNode methodNode = MethodNode.convertToNode(method.getName(), order);
 
-            //尝试先获取HandleTimingContainer[]，如果为null表示原方法没有添加过相关信息
-            HandleTimingContainer[] timingContainers = originMethodNameMap.get(originMethodName);
+            //尝试先获取HandleTimingContainer[]，如果为null表示该原方法没有添加过任何methodNode
+            TimingContainer timingContainer = originMethodNameMap.get(originMethodName);
 
-            if (timingContainers == null) {
-                timingContainers = new HandleTimingContainer[5];
-                timingContainers[timingContainersIndex] = new HandleTimingContainer();
-                originMethodNameMap.put(originMethodName, timingContainers);
-            } else if (timingContainers[timingContainersIndex] == null) {
-                timingContainers[timingContainersIndex] = new HandleTimingContainer();
+            if (timingContainer == null) {
+                timingContainer = new TimingContainer();
+                timingContainer.containers[timingContainersIndex] = new HandleTimingContainer();
+                originMethodNameMap.put(originMethodName, timingContainer);
+            } else if (timingContainer.containers[timingContainersIndex] == null) {
+                timingContainer.containers[timingContainersIndex] = new HandleTimingContainer();
             }
 
-            timingContainers[timingContainersIndex].addMethodNode(methodNode);
+            // 是否存在自定义的Handle节点，存在则对hasHandleTiming进行true 赋值
+            if (timing == TimeNode.HANDLE) {
+                timingContainer.hasHandleTiming = true;
+                timingContainer.handleNodeLength++;
+            }
+
+            timingContainer.containers[timingContainersIndex].addMethodNode(methodNode);
         }
 
         protected Set<String> getOriginMethodNames() {
             return this.originMethodNameMap.keySet();
         }
 
+        /**
+         * 判断当前方法名 下是否还有methodNode
+         * 
+         * @param originMethodName
+         * @return
+         */
         protected boolean hasNextNode(String originMethodName) {
             // 如果当前遍历方法与入参方法名不同则 重置：遍历节点索引，遍历方法名 与 遍历数组索引
             if (!originMethodName.equals(this.curMethod)) {
@@ -238,14 +243,31 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
                 resetNode();
             }
             // 获取当前方法的 HandleTimingContainer数组
-            HandleTimingContainer[] containers = originMethodNameMap.get(originMethodName);
+            TimingContainer timingContainer = originMethodNameMap.get(originMethodName);
             for (;;) {
 
                 if (this.curTiming > 4) {
                     return false;
                 }
 
-                HandleTimingContainer container = containers[this.curTiming];
+                HandleTimingContainer container = timingContainer.containers[this.curTiming];
+
+                // 如果hasHandleTiming为false（不存在Handle节点），且handleAfter为false（handle节点未处理），且当遍历到handle节点
+                // 这样判断的目的是 如果不存在重写的handle节点 就只需要返回一次。
+                if (this.curTiming == 2 && !timingContainer.hasHandleTiming && !timingContainer.handleAfter) {
+                    this.curTiming++;
+                    timingContainer.handleAfter = true;
+                    return true;
+                }
+                // 如果存在重写的handle节点，且当前遍历到第一个Handle节点 或是最后一个handle节点
+                // 走这个分支的情况 就会返回两次
+                else if (this.curTiming == 2 && this.curNodeIndex == 0) {
+                    return true;
+                } else if (this.curTiming == 2 && this.curNodeIndex == container.length) {
+                    this.curNodeIndex = 0;
+                    this.curTiming++;
+                    return true;
+                }
 
                 if (container == null) {
                     this.curTiming++;
@@ -264,20 +286,57 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
             }
         }
 
+        /**
+         * 获取下当前curTiming，curNodeIndex下的methodNode，然后curNodeIndex增加。
+         * 由于不管是否重写Handle节点都会在该节点停下，所以增加非空判断，不存在Handle节点的container时返回null即可
+         * 
+         * @return
+         */
         protected MethodNode nextNode() {
-            HandleTimingContainer[] handleTimingContainers = this.originMethodNameMap.get(this.curMethod);
-            return handleTimingContainers[curTiming].getNode(this.curNodeIndex++);
+            TimingContainer timingContainer = this.originMethodNameMap.get(this.curMethod);
+            HandleTimingContainer container = timingContainer.containers[curTiming];
+            if (container != null) {
+                return container.getNode(this.curNodeIndex++);
+            } else {
+                return null;
+            }
+
         }
 
+        /**
+         * 重置获取下当前curTiming，curNodeIndex下的methodNode归零
+         */
         protected void resetNode() {
             this.curTiming = 0;
             this.curNodeIndex = 0;
         }
+
+        protected boolean hasHandleTiming() {
+            if (this.curContainer == null) {
+                this.curContainer = this.originMethodNameMap.get(this.curMethod);
+            }
+            return this.curContainer.hasHandleTiming;
+        }
+
+        protected boolean handleAfter() {
+            if (this.curContainer == null) {
+                this.curContainer = this.originMethodNameMap.get(this.curMethod);
+            }
+            return this.curContainer.handleAfter;
+        }
+
+        protected int handleNodeLength() {
+            if (this.curContainer == null) {
+                this.curContainer = this.originMethodNameMap.get(this.curMethod);
+            }
+            return this.curContainer.handleNodeLength;
+        }
+
     }
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-
+        // 这里不做操作
     }
 
 }
