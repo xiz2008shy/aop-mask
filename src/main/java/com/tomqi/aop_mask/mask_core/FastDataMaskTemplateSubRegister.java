@@ -13,6 +13,7 @@ import org.springframework.beans.factory.support.*;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
@@ -259,6 +260,10 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
                 resetNode();
             }
 
+            return findNextNode(timingContainer);
+        }
+
+        private boolean findNextNode(TimingContainer timingContainer) {
             for (; ; ) {
 
                 if (this.curTiming > 4) {
@@ -273,24 +278,8 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
                 HandleTimingContainer container = timingContainer.containers[this.curTiming];
 
                 //如果当前TimeNode是Handle节点，并且handle节点未处理
-                if (this.curTiming == 2 && !timingContainer.isHandleDone) {
-                    // 进一步判断是否存在重写的handle方法，如果不存在-返回true，外部将直接调用超类的handle方法，并将isHandleDone标记为true表示已完成handle处理
-                    if (!timingContainer.hasHandleTiming) {
-                        timingContainer.isHandleDone = true;
-                        return true;
-                    }
-                    // 如果存在重写的handle方法
-                    else {
-                        // 当前handle节点是处理到第一个handle方法
-                        if (this.curNodeIndex == 0) {
-                            return true;
-                        // 当前handle节点是处理最后一个handle方法
-                        } else if (this.curNodeIndex == timingContainer.handleNodeLength) {
-                            this.curNodeIndex = 0;
-                            timingContainer.isHandleDone = true;
-                            return true;
-                        }
-                    }
+                if (this.curTiming == 2 && !timingContainer.isHandleDone && handleNodeProcess(timingContainer)) {
+                    return true;
                 }
 
                 if (container == null) {
@@ -298,17 +287,51 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
                     continue;
                 }
 
-                curTiming:
-                for (; ; ) {
-                    if (this.curNodeIndex < container.length) {
-                        return true;
-                    } else {
-                        this.curNodeIndex = 0;
-                        break curTiming;
-                    }
-                }
+                if (getNextNode(container)) return true;
                 this.curTiming++;
             }
+        }
+
+        /**
+         * 获取下一个非handle节点的MethodNode，有返回true，否者返回false表示当前TimeNode已遍历完，false不代表没有下一个节点
+         * @param container
+         * @return
+         */
+        private boolean getNextNode(HandleTimingContainer container) {
+            for (; ; ) {
+                if (this.curNodeIndex < container.length) {
+                    return true;
+                } else {
+                    this.curNodeIndex = 0;
+                    return false;
+                }
+            }
+        }
+
+        /**
+         * 处理handleNode节点，如果存在就返回true，否则返回false，而false表示不存在未处理的handleMethod，不代表没有下一个节点
+         * @param timingContainer
+         * @return
+         */
+        private boolean handleNodeProcess(TimingContainer timingContainer) {
+            // 进一步判断是否存在重写的handle方法，如果不存在-返回true，外部将直接调用超类的handle方法，并将isHandleDone标记为true表示已完成handle处理
+            if (!timingContainer.hasHandleTiming) {
+                timingContainer.isHandleDone = true;
+                return true;
+            }
+            // 如果存在重写的handle方法
+            else {
+                // 当前handle节点是处理到第一个handle方法
+                if (this.curNodeIndex == 0) {
+                    return true;
+                    // 当前handle节点是处理最后一个handle方法
+                } else if (this.curNodeIndex == timingContainer.handleNodeLength) {
+                    this.curNodeIndex = 0;
+                    timingContainer.isHandleDone = true;
+                    return true;
+                }
+            }
+            return false;
         }
 
 
@@ -342,6 +365,7 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
         /**
          * 该方法用于获取对应方法名 下是否有重写的handle方法
          * 务必在hasNextNode方法后使用，否则将抛出异常
+         *
          * @return
          */
         protected boolean hasHandleTiming() {
@@ -358,6 +382,7 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
         /**
          * 该方法用于获取对应方法名 下是重写的handle方法的数量
          * 务必在hasNextNode方法后使用，否则将抛出异常
+         *
          * @return
          */
         protected int handleNodeLength() {
