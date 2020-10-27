@@ -4,6 +4,7 @@ import com.tomqi.aop_mask.Exception.NonMaskException;
 import com.tomqi.aop_mask.annotation.MaskOn;
 import com.tomqi.aop_mask.mask_core.AbstractDefaultDataMask;
 import com.tomqi.aop_mask.mask_core.DataMask;
+import com.tomqi.aop_mask.mask_core.FastDataMaskTemplate;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -41,6 +42,12 @@ public class MaskContainer {
         MaskContainer maskingStrategies = applicationContext.getBean(MASKING_STRATEGY_CONTAINER_BEAN_NAME,
                 MaskContainer.class);
         String[] beanNames = applicationContext.getBeanNamesForType(AbstractDefaultDataMask.class);
+        String[] beanNames2 = applicationContext.getBeanNamesForType(FastDataMaskTemplate.class);
+        putStrategies(maskingStrategies, beanNames);
+        putStrategies(maskingStrategies, beanNames2);
+    }
+
+    private void putStrategies(MaskContainer maskingStrategies, String[] beanNames) {
         if (ArrayUtils.isNotEmpty(beanNames)){
             for (String beanName:beanNames) {
                 DataMask maskBean = applicationContext.getBean(beanName, DataMask.class);

@@ -40,7 +40,7 @@ public abstract class AbstractDefaultDataMask implements DataMask {
      * @return
      */
     @Override
-    public Object maskData(MaskMessage message) {
+    public Object maskData(MaskMessage message) throws Throwable {
 
         String methodName = message.getMethodName();
         MaskMethodInfo maskMethodInfo = curMethodMap.get(methodName);
@@ -92,13 +92,9 @@ public abstract class AbstractDefaultDataMask implements DataMask {
      * @param message
      * @return
      */
-    private void defaultHandle(MaskMessage message) {
+    private void defaultHandle(MaskMessage message) throws Throwable{
         Object proceed = null;
-        try {
-            proceed = message.proceed();
-        } catch (Throwable throwable) {
-            log.info("PRO AbstractDefaultDataMasking-defaultHandle方法执行异常!",throwable);
-        }
+        proceed = message.proceed();
         message.setResult(proceed);
     }
 

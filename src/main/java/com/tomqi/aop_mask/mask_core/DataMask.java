@@ -16,5 +16,5 @@ public interface DataMask {
      * @param message
      * @return
      */
-    Object maskData(MaskMessage message);
+    Object maskData(MaskMessage message) throws Throwable;
 }
