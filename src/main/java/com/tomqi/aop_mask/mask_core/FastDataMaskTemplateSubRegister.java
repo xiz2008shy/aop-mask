@@ -54,8 +54,9 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
                 CtClass ctClass = pool.get(clazz.getName());
                 CtClass assistCreateClazz = pool
                         .makeClass(NEW_CLASS_PACKAGE + clazz.getSimpleName().concat(NEW_CLASS_SUFFIX), ctClass);
-                CtMethod maskData = new CtMethod(CtClass.voidType, CORE_METHOD_NAME,
-                        new CtClass[]{pool.get(MASK_MESSAGE)}, assistCreateClazz);
+                CtMethod maskData = CtNewMethod.make(CtClass.voidType, CORE_METHOD_NAME, new CtClass[]{pool.get(MASK_MESSAGE)}, new CtClass[]{pool.get("java.lang.Throwable")}, "{}", assistCreateClazz);
+               /* CtMethod maskData = new CtMethod(CtClass.voidType, CORE_METHOD_NAME,
+                        new CtClass[]{pool.get(MASK_MESSAGE)}, assistCreateClazz);*/
 
                 StringBuilder methodText = new StringBuilder();
                 //这里写入maskData的具体的执行代码
@@ -65,13 +66,14 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
 
                 maskData.setBody(methodText.toString());
                 assistCreateClazz.addMethod(maskData);
-                assistCreateClazz.writeFile();
+                assistCreateClazz.writeFile(ClassScanner.rootPath());
 
                 Class<?> assistClazz = assistCreateClazz.toClass();
 
                 BeanDefinitionBuilder maskBDBuilder = BeanDefinitionBuilder.genericBeanDefinition(assistClazz);
                 GenericBeanDefinition beanDefinition = (GenericBeanDefinition) maskBDBuilder.getBeanDefinition();
-                String simpleName = clazz.getSimpleName();
+
+                String simpleName = assistClazz.getSimpleName();
                 registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);
             } catch (Exception e) {
                 log.info("FastDataMaskTemplate子类加载错误!", e);

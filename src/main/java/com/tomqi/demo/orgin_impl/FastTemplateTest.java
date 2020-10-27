@@ -1,6 +1,7 @@
 package com.tomqi.demo.orgin_impl;
 
 import com.tomqi.aop_mask.annotation.MaskMethod;
+import com.tomqi.aop_mask.annotation.MaskOn;
 import com.tomqi.aop_mask.annotation.TimeNode;
 import com.tomqi.aop_mask.mask_core.FastDataMaskTemplate;
 import com.tomqi.aop_mask.pojo.MaskMessage;
@@ -13,7 +14,8 @@ import com.tomqi.aop_mask.pojo.MaskMessage;
  * @Description : 一个测试用例
  * @data 2020/10/190:31
  **/
-public class TemplateTest extends FastDataMaskTemplate {
+@MaskOn("DemoController")
+public class FastTemplateTest extends FastDataMaskTemplate {
 
     @MaskMethod("hello")
     @Override

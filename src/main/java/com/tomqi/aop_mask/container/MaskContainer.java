@@ -11,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.annotation.AnnotationUtils;
+
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,7 +64,8 @@ public class MaskContainer {
      * @param maskBean
      */
     private void putIntoContainer(String beanName,DataMask maskBean){
-        MaskOn maskOn = maskBean.getClass().getDeclaredAnnotation(MaskOn.class);
+        MaskOn maskOn = AnnotationUtils.findAnnotation(maskBean.getClass(),MaskOn.class);
+        /*MaskOn maskOn = maskBean.getClass().getDeclaredAnnotation(MaskOn.class);*/
         if(Objects.nonNull(maskOn) && StringUtils.isNotBlank(maskOn.value())){
             this.originNameMap.put(maskOn.value(),maskBean);
         }
