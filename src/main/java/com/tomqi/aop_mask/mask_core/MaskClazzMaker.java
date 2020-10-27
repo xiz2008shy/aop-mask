@@ -31,7 +31,8 @@ public class MaskClazzMaker {
                 oneMethodHandle(methodText,collector);
             }
         } else {
-            methodText.append("String methodName = $1.getSimpleClassName();\n");
+            methodText.append("String methodName = $1.getMethodName();\n");
+            methodText.append("System.out.println(\"开始maskData---->\"+ methodName);\n");
             methodText.append("switch(methodName){\n");
             for (String name : originMethodNames) {
                 methodText.append("case \"");

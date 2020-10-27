@@ -12,9 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotationUtils;
-
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -33,7 +31,7 @@ public class MaskContainer {
     @Autowired
     private ApplicationContext applicationContext;
 
-    private static final String          MASKING_STRATEGY_CONTAINER_BEAN_NAME = "maskingStrategies";
+    public static final String          MASKING_STRATEGY_CONTAINER_BEAN_NAME = "maskingStrategies";
 
     public static final String           MASKING_SUFFIX                       = "Mask";
 
@@ -44,15 +42,16 @@ public class MaskContainer {
         MaskContainer maskingStrategies = applicationContext.getBean(MASKING_STRATEGY_CONTAINER_BEAN_NAME,
                 MaskContainer.class);
         String[] beanNames = applicationContext.getBeanNamesForType(AbstractDefaultDataMask.class);
-        String[] beanNames2 = applicationContext.getBeanNamesForType(FastDataMaskTemplate.class);
         putStrategies(maskingStrategies, beanNames);
-        putStrategies(maskingStrategies, beanNames2);
+        /*String[] beanNames2 = applicationContext.getBeanDefinitionNames();
+        String[] names2 = Arrays.stream(beanNames2).filter(x -> x.endsWith(NEW_CLASS_SUFFIX)).toArray(String[]::new);
+        putStrategies(maskingStrategies, names2);*/
     }
 
     private void putStrategies(MaskContainer maskingStrategies, String[] beanNames) {
         if (ArrayUtils.isNotEmpty(beanNames)){
             for (String beanName:beanNames) {
-                DataMask maskBean = applicationContext.getBean(beanName, DataMask.class);
+                DataMask maskBean = (DataMask)applicationContext.getBean(beanName);
                 maskingStrategies.putIntoContainer(beanName,maskBean);
             }
         }
@@ -63,7 +62,7 @@ public class MaskContainer {
      * @param beanName
      * @param maskBean
      */
-    private void putIntoContainer(String beanName,DataMask maskBean){
+    public void putIntoContainer(String beanName, DataMask maskBean){
         MaskOn maskOn = AnnotationUtils.findAnnotation(maskBean.getClass(),MaskOn.class);
         /*MaskOn maskOn = maskBean.getClass().getDeclaredAnnotation(MaskOn.class);*/
         if(Objects.nonNull(maskOn) && StringUtils.isNotBlank(maskOn.value())){

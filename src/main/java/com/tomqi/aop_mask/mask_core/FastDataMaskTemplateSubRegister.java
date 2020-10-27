@@ -3,21 +3,27 @@ package com.tomqi.aop_mask.mask_core;
 import com.tomqi.aop_mask.annotation.MTiming;
 import com.tomqi.aop_mask.annotation.MaskMethod;
 import com.tomqi.aop_mask.annotation.TimeNode;
+import com.tomqi.aop_mask.container.MaskContainer;
 import com.tomqi.aop_mask.utils.ClassScanner;
 import javassist.*;
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.*;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import static com.tomqi.aop_mask.container.MaskContainer.MASKING_STRATEGY_CONTAINER_BEAN_NAME;
 
 /**
  * @author TOMQI
@@ -27,18 +33,24 @@ import java.util.Set;
  * @data 2020/10/1823:59
  **/
 @Component
-public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPostProcessor {
+public class FastDataMaskTemplateSubRegister  implements ApplicationListener<ContextRefreshedEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(FastDataMaskTemplateSubRegister.class);
     private static final String CORE_METHOD_NAME = "maskData";
     private static final String NEW_CLASS_PACKAGE = "com.tomqi.aop_mask.remark.";
-    private static final String NEW_CLASS_SUFFIX = "$Mask";
+    public static final String NEW_CLASS_SUFFIX = "$Mask";
     private static final String MASK_MESSAGE = "com.tomqi.aop_mask.pojo.MaskMessage";
 
-    @Override
-    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+    @Autowired
+    private ApplicationContext applicationContext;
 
+    @Override
+    public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent)  {
+        // 查找指定class的子类或实现
         Set<Class<?>> classes = ClassScanner.scannerAll(FastDataMaskTemplate.class);
+        MaskContainer maskingStrategies = applicationContext.getBean(MASKING_STRATEGY_CONTAINER_BEAN_NAME,
+                MaskContainer.class);
+        String[] beanNames2 = applicationContext.getBeanDefinitionNames();
         for (Class<?> clazz : classes) {
             ConversionMethodCollector collector = new ConversionMethodCollector();
             Method[] clazzMethods = clazz.getDeclaredMethods();
@@ -49,32 +61,51 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
             Set<String> originMethodNames = collector.getOriginMethodNames();
 
             ClassPool pool = new ClassPool();
-            pool.insertClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));
+            Loader jClassLoader = new Loader();
+            pool.s
+            /*pool.insertClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));*/
             try {
                 CtClass ctClass = pool.get(clazz.getName());
-                CtClass assistCreateClazz = pool
-                        .makeClass(NEW_CLASS_PACKAGE + clazz.getSimpleName().concat(NEW_CLASS_SUFFIX), ctClass);
-                CtMethod maskData = CtNewMethod.make(CtClass.voidType, CORE_METHOD_NAME, new CtClass[]{pool.get(MASK_MESSAGE)}, new CtClass[]{pool.get("java.lang.Throwable")}, "{}", assistCreateClazz);
+                /*CtClass assistCreateClazz = pool
+                        .makeClass(NEW_CLASS_PACKAGE + clazz.getSimpleName().concat(NEW_CLASS_SUFFIX), ctClass);*/
+
+                // 创建构造方法
+                /*CtConstructor ctConstructor = new CtConstructor(new CtClass[0], assistCreateClazz);
+                ctConstructor.setBody("{ System.out.println(\"success create!\");}");
+                assistCreateClazz.addConstructor(ctConstructor);*/
+
+                CtMethod maskData = CtNewMethod.make(CtClass.voidType, CORE_METHOD_NAME, new CtClass[]{pool.get(MASK_MESSAGE)}, new CtClass[]{pool.get("java.lang.Throwable")}, "{}", ctClass);
                /* CtMethod maskData = new CtMethod(CtClass.voidType, CORE_METHOD_NAME,
                         new CtClass[]{pool.get(MASK_MESSAGE)}, assistCreateClazz);*/
-
                 StringBuilder methodText = new StringBuilder();
+
                 //这里写入maskData的具体的执行代码
                 methodText.append("{\n");
                 MaskClazzMaker.methodBodyCreate(originMethodNames, methodText, collector);
                 methodText.append("}\n");
-
                 maskData.setBody(methodText.toString());
-                assistCreateClazz.addMethod(maskData);
-                assistCreateClazz.writeFile(ClassScanner.rootPath());
+                ctClass.addMethod(maskData);
 
-                Class<?> assistClazz = assistCreateClazz.toClass();
+                //是否生成class文件
+                if (true){
+                    ctClass.writeFile(ClassScanner.rootPath());
+                }
+                Class<?> assistClazz = jClassLoader.loadClass(clazz.getName());
 
-                BeanDefinitionBuilder maskBDBuilder = BeanDefinitionBuilder.genericBeanDefinition(assistClazz);
+                /*BeanDefinitionBuilder maskBDBuilder = BeanDefinitionBuilder.genericBeanDefinition(assistClazz);
                 GenericBeanDefinition beanDefinition = (GenericBeanDefinition) maskBDBuilder.getBeanDefinition();
+                //在这里，我们可以给该对象的属性注入对应的实例。
+                beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(assistClazz);
+                beanDefinition.setBeanClass(FastMaskFactory.class);*/
 
-                String simpleName = assistClazz.getSimpleName();
-                registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);
+                //===============================================
+
+                maskingStrategies.putIntoContainer(assistClazz.getSimpleName(), (DataMask) assistClazz.getConstructor().newInstance());
+                //===============================================
+
+                /*String simpleName = assistClazz.getSimpleName();
+                registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);*/
+
             } catch (Exception e) {
                 log.info("FastDataMaskTemplate子类加载错误!", e);
             }
@@ -132,7 +163,7 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
             } else {
                 int index = this.length - 1;
                 while (true) {
-                    this.methodNodes[index + 1] = this.methodNodes[index];
+                    this.methodNodes[index | 1] = this.methodNodes[index];
                     if (index == 0 || this.methodNodes[index - 1].order < node.order) {
                         this.methodNodes[index] = node;
                         break;
@@ -144,7 +175,7 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
 
         private void expandArray() {
             int size = this.methodNodes.length;
-            MethodNode[] nodes = new MethodNode[size * 2];
+            MethodNode[] nodes = new MethodNode[size << 1];
             int index = 0;
             while (true) {
                 nodes[index] = this.methodNodes[index];
@@ -391,11 +422,6 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
             return this.curContainer.handleNodeLength;
         }
 
-    }
-
-    @Override
-    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-        // 这里不做操作
     }
 
 }
