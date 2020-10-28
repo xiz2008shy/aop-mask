@@ -2,9 +2,7 @@ package com.tomqi.aop_mask.container;
 
 import com.tomqi.aop_mask.Exception.NonMaskException;
 import com.tomqi.aop_mask.annotation.MaskOn;
-import com.tomqi.aop_mask.mask_core.AbstractDefaultDataMask;
 import com.tomqi.aop_mask.mask_core.DataMask;
-import com.tomqi.aop_mask.mask_core.FastDataMaskTemplate;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -14,6 +12,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotationUtils;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+
 
 /**
  *
@@ -41,21 +40,17 @@ public class MaskContainer {
     private void initContainer() {
         MaskContainer maskingStrategies = applicationContext.getBean(MASKING_STRATEGY_CONTAINER_BEAN_NAME,
                 MaskContainer.class);
-        String[] beanNames = applicationContext.getBeanNamesForType(AbstractDefaultDataMask.class);
-        putStrategies(maskingStrategies, beanNames);
-        /*String[] beanNames2 = applicationContext.getBeanDefinitionNames();
-        String[] names2 = Arrays.stream(beanNames2).filter(x -> x.endsWith(NEW_CLASS_SUFFIX)).toArray(String[]::new);
-        putStrategies(maskingStrategies, names2);*/
-    }
-
-    private void putStrategies(MaskContainer maskingStrategies, String[] beanNames) {
+        String[] beanNames = applicationContext.getBeanNamesForType(DataMask.class);
         if (ArrayUtils.isNotEmpty(beanNames)){
             for (String beanName:beanNames) {
                 DataMask maskBean = (DataMask)applicationContext.getBean(beanName);
                 maskingStrategies.putIntoContainer(beanName,maskBean);
             }
         }
+
     }
+
+
 
     /**
      * 将key和value方法对应的容器中，自动处理两个容器的key值
@@ -64,7 +59,6 @@ public class MaskContainer {
      */
     public void putIntoContainer(String beanName, DataMask maskBean){
         MaskOn maskOn = AnnotationUtils.findAnnotation(maskBean.getClass(),MaskOn.class);
-        /*MaskOn maskOn = maskBean.getClass().getDeclaredAnnotation(MaskOn.class);*/
         if(Objects.nonNull(maskOn) && StringUtils.isNotBlank(maskOn.value())){
             this.originNameMap.put(maskOn.value(),maskBean);
         }

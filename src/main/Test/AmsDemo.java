@@ -1,5 +1,3 @@
-package com.tomqi.demo.test;
-
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import java.io.FileOutputStream;

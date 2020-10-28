@@ -42,6 +42,11 @@ public class MaskMessage {
     private MethodSignature signature;
 
     /**
+     * 原方法名
+     */
+    private String methodName;
+
+    /**
      * 该字段用于变量传递
      */
     private Object attribute;
@@ -152,6 +157,7 @@ public class MaskMessage {
         message.setSignature((MethodSignature)joinPoint.getSignature());
         message.setSimpleClassName(joinPoint.getSignature().getDeclaringType().getSimpleName());
         message.setMasking(message.signature.getMethod().getAnnotation(Masking.class));
+        message.setMethodName(message.initMethodName());
         return message;
     }
 
@@ -160,13 +166,21 @@ public class MaskMessage {
      * @param
      * @return
      */
-    public String getMethodName() {
+    public String initMethodName() {
         Masking annotation = this.signature.getMethod().getAnnotation(Masking.class);
         if (StringUtils.isNotBlank(annotation.alias())) {
             return annotation.alias();
         }else {
-            return signature.getMethod().getName();
+            return this.signature.getMethod().getName();
         }
+    }
+
+    public String getMethodName() {
+        return methodName;
+    }
+
+    public void setMethodName(String methodName) {
+        this.methodName = methodName;
     }
 
     public static Method getMethod(ProceedingJoinPoint joinPoint) {

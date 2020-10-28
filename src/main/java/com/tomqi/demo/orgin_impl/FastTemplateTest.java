@@ -24,7 +24,7 @@ public class FastTemplateTest extends FastDataMaskTemplate {
     }
 
 
-    @MaskMethod(methodName = "fast",timing = TimeNode.PRE_HANDLE)
+    @MaskMethod(methodName = "aliasFast",timing = TimeNode.PRE_HANDLE)
     public void fastPerHandle(MaskMessage message) {
         System.out.println("fast方法的 [fastPerHandle]--->执行!");
     }

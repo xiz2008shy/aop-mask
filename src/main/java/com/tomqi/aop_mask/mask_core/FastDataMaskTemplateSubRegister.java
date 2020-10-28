@@ -3,10 +3,8 @@ package com.tomqi.aop_mask.mask_core;
 import com.tomqi.aop_mask.annotation.MTiming;
 import com.tomqi.aop_mask.annotation.MaskMethod;
 import com.tomqi.aop_mask.annotation.TimeNode;
-import com.tomqi.aop_mask.container.MaskContainer;
 import com.tomqi.aop_mask.utils.ClassScanner;
 import javassist.*;
-import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -14,8 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.*;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationListener;
-import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -23,7 +19,7 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import static com.tomqi.aop_mask.container.MaskContainer.MASKING_STRATEGY_CONTAINER_BEAN_NAME;
+
 
 /**
  * @author TOMQI
@@ -33,24 +29,22 @@ import static com.tomqi.aop_mask.container.MaskContainer.MASKING_STRATEGY_CONTAI
  * @data 2020/10/1823:59
  **/
 @Component
-public class FastDataMaskTemplateSubRegister  implements ApplicationListener<ContextRefreshedEvent> {
+public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPostProcessor {
 
-    private static final Logger log = LoggerFactory.getLogger(FastDataMaskTemplateSubRegister.class);
-    private static final String CORE_METHOD_NAME = "maskData";
+    private static final Logger log               = LoggerFactory.getLogger(FastDataMaskTemplateSubRegister.class);
+    private static final String CORE_METHOD_NAME  = "maskData";
     private static final String NEW_CLASS_PACKAGE = "com.tomqi.aop_mask.remark.";
-    public static final String NEW_CLASS_SUFFIX = "$Mask";
-    private static final String MASK_MESSAGE = "com.tomqi.aop_mask.pojo.MaskMessage";
+    public static final String  NEW_CLASS_SUFFIX  = "$Mask";
+    private static final String MASK_MESSAGE      = "com.tomqi.aop_mask.pojo.MaskMessage";
 
     @Autowired
-    private ApplicationContext applicationContext;
+    private ApplicationContext  applicationContext;
 
     @Override
-    public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent)  {
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException  {
         // 查找指定class的子类或实现
         Set<Class<?>> classes = ClassScanner.scannerAll(FastDataMaskTemplate.class);
-        MaskContainer maskingStrategies = applicationContext.getBean(MASKING_STRATEGY_CONTAINER_BEAN_NAME,
-                MaskContainer.class);
-        String[] beanNames2 = applicationContext.getBeanDefinitionNames();
+        
         for (Class<?> clazz : classes) {
             ConversionMethodCollector collector = new ConversionMethodCollector();
             Method[] clazzMethods = clazz.getDeclaredMethods();
@@ -61,50 +55,45 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
             Set<String> originMethodNames = collector.getOriginMethodNames();
 
             ClassPool pool = new ClassPool();
-            Loader jClassLoader = new Loader();
-            pool.s
-            /*pool.insertClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));*/
+            pool.insertClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));
             try {
                 CtClass ctClass = pool.get(clazz.getName());
-                /*CtClass assistCreateClazz = pool
-                        .makeClass(NEW_CLASS_PACKAGE + clazz.getSimpleName().concat(NEW_CLASS_SUFFIX), ctClass);*/
+                CtClass assistCreateClazz = pool
+                        .makeClass(NEW_CLASS_PACKAGE + clazz.getSimpleName().concat(NEW_CLASS_SUFFIX), ctClass);
 
-                // 创建构造方法
-                /*CtConstructor ctConstructor = new CtConstructor(new CtClass[0], assistCreateClazz);
-                ctConstructor.setBody("{ System.out.println(\"success create!\");}");
-                assistCreateClazz.addConstructor(ctConstructor);*/
+                // 构造方法
+                CtConstructor ctConstructor = new CtConstructor(new CtClass[0], assistCreateClazz);
+                ctConstructor.setBody("{ System.out.println(\"success create " + assistCreateClazz.getSimpleName() + "!\");}");
+                assistCreateClazz.addConstructor(ctConstructor);
 
-                CtMethod maskData = CtNewMethod.make(CtClass.voidType, CORE_METHOD_NAME, new CtClass[]{pool.get(MASK_MESSAGE)}, new CtClass[]{pool.get("java.lang.Throwable")}, "{}", ctClass);
-               /* CtMethod maskData = new CtMethod(CtClass.voidType, CORE_METHOD_NAME,
-                        new CtClass[]{pool.get(MASK_MESSAGE)}, assistCreateClazz);*/
+                // 准备重写maskData方法
+                CtMethod method = ctClass.getMethod(CORE_METHOD_NAME,"(Lcom/tomqi/aop_mask/pojo/MaskMessage;)Ljava/lang/Object;");
+                CtMethod subMaskData = CtNewMethod.copy(method, assistCreateClazz, null);
+
                 StringBuilder methodText = new StringBuilder();
 
                 //这里写入maskData的具体的执行代码
+                
                 methodText.append("{\n");
-                MaskClazzMaker.methodBodyCreate(originMethodNames, methodText, collector);
-                methodText.append("}\n");
-                maskData.setBody(methodText.toString());
-                ctClass.addMethod(maskData);
+                MaskClazzMaker.methodBodyCreate(originMethodNames,methodText,collector);
+                methodText.append("}");
+                subMaskData.setBody(methodText.toString());
+                assistCreateClazz.addMethod(subMaskData);
 
                 //是否生成class文件
-                if (true){
-                    ctClass.writeFile(ClassScanner.rootPath());
+                if (true) {
+                    assistCreateClazz.writeFile(ClassScanner.rootPath());
                 }
-                Class<?> assistClazz = jClassLoader.loadClass(clazz.getName());
 
-                /*BeanDefinitionBuilder maskBDBuilder = BeanDefinitionBuilder.genericBeanDefinition(assistClazz);
+                Class<?> assistClazz = assistCreateClazz.toClass();
+
+                // 定义beanDefition
+                BeanDefinitionBuilder maskBDBuilder = BeanDefinitionBuilder.genericBeanDefinition(assistClazz);
                 GenericBeanDefinition beanDefinition = (GenericBeanDefinition) maskBDBuilder.getBeanDefinition();
-                //在这里，我们可以给该对象的属性注入对应的实例。
-                beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(assistClazz);
-                beanDefinition.setBeanClass(FastMaskFactory.class);*/
 
-                //===============================================
-
-                maskingStrategies.putIntoContainer(assistClazz.getSimpleName(), (DataMask) assistClazz.getConstructor().newInstance());
-                //===============================================
-
-                /*String simpleName = assistClazz.getSimpleName();
-                registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);*/
+                String simpleName = assistClazz.getSimpleName();
+                // 注册该beanDefinition
+                registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);
 
             } catch (Exception e) {
                 log.info("FastDataMaskTemplate子类加载错误!", e);
@@ -113,12 +102,13 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
     }
 
 
+
     /**
      * MethodNode-方法中的重要信息用此对象封装
      */
     static class MethodNode {
         String methodName;
-        int order;
+        int    order;
 
         private static MethodNode convertToNode(String methodName, int order) {
             MethodNode node = new MethodNode();
@@ -128,14 +118,13 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
         }
     }
 
-
     /**
      * HandleTimingContainer-保存对应方法中某个TimeNode节点的MethodNode数组
      */
     static class HandleTimingContainer {
         private MethodNode[] methodNodes;
 
-        private int length;
+        private int          length;
 
         private HandleTimingContainer() {
             this.methodNodes = new MethodNode[16];
@@ -163,7 +152,7 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
             } else {
                 int index = this.length - 1;
                 while (true) {
-                    this.methodNodes[index | 1] = this.methodNodes[index];
+                    this.methodNodes[index + 1] = this.methodNodes[index];
                     if (index == 0 || this.methodNodes[index - 1].order < node.order) {
                         this.methodNodes[index] = node;
                         break;
@@ -192,25 +181,23 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
         }
     }
 
-
     /**
      * 包含一个方法所有TimeNode下的所有MethodNode
      */
     private class TimingContainer {
-        private HandleTimingContainer[] containers = new HandleTimingContainer[5];
+        private HandleTimingContainer[] containers       = new HandleTimingContainer[5];
         /**
          * 判断当前template是否重写过handle节点
          */
-        private boolean hasHandleTiming = false;
+        private boolean                 hasHandleTiming  = false;
 
         /**
          * 代表当前template的handle节点是否被处理过
          */
-        private boolean isHandleDone = false;
+        private boolean                 isHandleDone     = false;
 
-        private int handleNodeLength = 0;
+        private int                     handleNodeLength = 0;
     }
-
 
     /**
      * ConversionMethodMap-用于建立FastMaskTemplate重构类与mask方法相关的信息。
@@ -222,15 +209,15 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
 
         private Map<String, TimingContainer> originMethodNameMap = new HashMap<>();
 
-        protected int curTiming = 0;
+        protected int                        curTiming           = 0;
 
-        protected int curNodeIndex = 0;
+        protected int                        curNodeIndex        = 0;
 
-        protected String curMethod = "";
+        protected String                     curMethod           = "";
 
-        protected TimingContainer curContainer;
+        protected TimingContainer            curContainer;
 
-        protected boolean isHandleFinish = false;
+        protected boolean                    isHandleFinish      = false;
 
         protected void putMethod(Method method) {
             MaskMethod maskMethodAnn = AnnotationUtils.findAnnotation(method, MaskMethod.class);
@@ -275,7 +262,6 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
             return this.originMethodNameMap.keySet();
         }
 
-
         /**
          * 判断当前mask的方法名 下是否还有methodNode
          *
@@ -297,7 +283,7 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
         }
 
         private boolean findNextNode(TimingContainer timingContainer) {
-            for (; ; ) {
+            for (;;) {
 
                 if (this.curTiming > 4) {
                     return false;
@@ -320,18 +306,20 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
                     continue;
                 }
 
-                if (getNextNode(container)) return true;
+                if (getNextNode(container))
+                    return true;
                 this.curTiming++;
             }
         }
 
         /**
          * 获取下一个非handle节点的MethodNode，有返回true，否者返回false表示当前TimeNode已遍历完，false不代表没有下一个节点
+         * 
          * @param container
          * @return
          */
         private boolean getNextNode(HandleTimingContainer container) {
-            for (; ; ) {
+            for (;;) {
                 if (this.curNodeIndex < container.length) {
                     return true;
                 } else {
@@ -343,6 +331,7 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
 
         /**
          * 处理handleNode节点，如果存在就返回true，否则返回false，而false表示不存在未处理的handleMethod，不代表没有下一个节点
+         * 
          * @param timingContainer
          * @return
          */
@@ -367,7 +356,6 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
             return false;
         }
 
-
         /**
          * 获取下当前curTiming，curNodeIndex下的methodNode，然后curNodeIndex增加。
          * 由于不管是否重写Handle节点都会在该节点停下，所以增加非空判断，不存在Handle节点的container时返回null即可
@@ -385,7 +373,6 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
 
         }
 
-
         /**
          * 重置获取下当前curTiming，curNodeIndex下的methodNode归零
          */
@@ -396,8 +383,7 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
         }
 
         /**
-         * 该方法用于获取对应方法名 下是否有重写的handle方法
-         * 务必在hasNextNode方法后使用，否则将抛出异常
+         * 该方法用于获取对应方法名 下是否有重写的handle方法 务必在hasNextNode方法后使用，否则将抛出异常
          *
          * @return
          */
@@ -413,8 +399,7 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
         }
 
         /**
-         * 该方法用于获取对应方法名 下是重写的handle方法的数量
-         * 务必在hasNextNode方法后使用，否则将抛出异常
+         * 该方法用于获取对应方法名 下是重写的handle方法的数量 务必在hasNextNode方法后使用，否则将抛出异常
          *
          * @return
          */
@@ -422,6 +407,11 @@ public class FastDataMaskTemplateSubRegister  implements ApplicationListener<Con
             return this.curContainer.handleNodeLength;
         }
 
+    }
+
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        //这里不处理
     }
 
 }

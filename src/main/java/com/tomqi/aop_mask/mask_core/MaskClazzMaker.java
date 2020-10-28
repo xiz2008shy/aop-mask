@@ -1,9 +1,9 @@
 package com.tomqi.aop_mask.mask_core;
 
 import com.tomqi.aop_mask.annotation.TimeNode;
-
 import java.util.Iterator;
 import java.util.Set;
+
 
 /**
  * 360 Financial Copyright
@@ -45,6 +45,7 @@ public class MaskClazzMaker {
             }
             methodText.append("}\n");
         }
+        methodText.append("return $1.getResult();\n");
     }
 
     public static void oneMethodHandle( StringBuilder methodText, FastDataMaskTemplateSubRegister.ConversionMethodCollector collector) {

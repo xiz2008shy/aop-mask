@@ -1,5 +1,3 @@
-package com.tomqi.demo.test;
-
 import javassist.*;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;

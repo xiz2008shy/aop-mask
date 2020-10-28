@@ -1,5 +1,3 @@
-package com.tomqi.demo.test;
-
 import com.tomqi.aop_mask.mask_core.FastDataMaskTemplate;
 import javassist.*;
 

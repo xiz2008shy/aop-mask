@@ -1,5 +1,3 @@
-package com.tomqi.demo.test;
-
 import javassist.*;
 
 /**

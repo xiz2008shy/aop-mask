@@ -27,7 +27,7 @@ public class DemoController {
     }
 
 
-    @Masking
+    @Masking(alias = "aliasFast")
     @RequestMapping("fast")
     public ResponseEntity<String> fast(@RequestParam("input") String input){
         System.out.println("fast [Handle]--->执行!");
