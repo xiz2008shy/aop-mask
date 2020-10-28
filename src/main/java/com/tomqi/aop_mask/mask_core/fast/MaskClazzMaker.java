@@ -1,4 +1,4 @@
-package com.tomqi.aop_mask.mask_core;
+package com.tomqi.aop_mask.mask_core.fast;
 
 import com.tomqi.aop_mask.annotation.TimeNode;
 import java.util.Iterator;
@@ -17,7 +17,7 @@ public class MaskClazzMaker {
     private MaskClazzMaker() {
     }
 
-    public static void methodBodyCreate(Set<String> originMethodNames, StringBuilder methodText, FastDataMaskTemplateSubRegister.ConversionMethodCollector collector) {
+    public static void methodBodyCreate(Set<String> originMethodNames, StringBuilder methodText, FastMaskTemplateSubRegister.ConversionMethodCollector collector) {
 
         if (originMethodNames.isEmpty()) {
             return;
@@ -48,7 +48,7 @@ public class MaskClazzMaker {
         methodText.append("return $1.getResult();\n");
     }
 
-    public static void oneMethodHandle( StringBuilder methodText, FastDataMaskTemplateSubRegister.ConversionMethodCollector collector) {
+    public static void oneMethodHandle(StringBuilder methodText, FastMaskTemplateSubRegister.ConversionMethodCollector collector) {
         boolean isHandleTiming = collector.curTiming == TimeNode.HANDLE.getValue();
         //当前循环中是否存在handle节点，不存在handle处理将一次性写入
         if (isHandleTiming) {
@@ -64,7 +64,7 @@ public class MaskClazzMaker {
                 if (collector.curNodeIndex == 0) {
                     methodText.append("$1.setJoinPoint(com.tomqi.aop_mask.utils.MaskContext.getPoint());\n");
                 }
-                FastDataMaskTemplateSubRegister.MethodNode node = collector.nextNode();
+                FastMaskTemplateSubRegister.MethodNode node = collector.nextNode();
                 methodText.append(node.methodName);
                 methodText.append("($1);\n");
                 if (collector.curNodeIndex == collector.handleNodeLength()) {
@@ -72,7 +72,7 @@ public class MaskClazzMaker {
                 }
             }
         } else {
-            FastDataMaskTemplateSubRegister.MethodNode node = collector.nextNode();
+            FastMaskTemplateSubRegister.MethodNode node = collector.nextNode();
             methodText.append(node.methodName);
             methodText.append("($1);\n");
         }

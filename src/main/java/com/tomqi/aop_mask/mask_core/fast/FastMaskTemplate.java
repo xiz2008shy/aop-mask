@@ -1,7 +1,8 @@
-package com.tomqi.aop_mask.mask_core;
+package com.tomqi.aop_mask.mask_core.fast;
 
 import com.tomqi.aop_mask.annotation.MTiming;
 import com.tomqi.aop_mask.annotation.TimeNode;
+import com.tomqi.aop_mask.mask_core.DataMask;
 import com.tomqi.aop_mask.pojo.MaskMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,9 +14,9 @@ import org.slf4j.LoggerFactory;
  * @Description :适用于更高性能的Mask应用方式
  * @data 2020/10/1822:42
  **/
-public class FastDataMaskTemplate implements DataMask {
+public class FastMaskTemplate implements DataMask {
 
-    private static final Logger log = LoggerFactory.getLogger(FastDataMaskTemplate.class);
+    private static final Logger log = LoggerFactory.getLogger(FastMaskTemplate.class);
 
     @MTiming(TimeNode.BEFORE_PRE_HANDLE )
     public void beforePreHandle(MaskMessage message) {

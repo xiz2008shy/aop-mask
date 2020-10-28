@@ -1,4 +1,4 @@
-import com.tomqi.aop_mask.mask_core.FastDataMaskTemplate;
+import com.tomqi.aop_mask.mask_core.fast.FastMaskTemplate;
 import com.tomqi.aop_mask.utils.ClassScanner;
 import javassist.*;
 import org.slf4j.Logger;
@@ -23,7 +23,7 @@ public class AssistDemoTest {
 
     public static void main(String[] args) {
         // 查找指定class的子类或实现
-        Set<Class<?>> classes = ClassScanner.scannerAll(FastDataMaskTemplate.class);
+        Set<Class<?>> classes = ClassScanner.scannerAll(FastMaskTemplate.class);
 
         for (Class<?> clazz : classes) {
 

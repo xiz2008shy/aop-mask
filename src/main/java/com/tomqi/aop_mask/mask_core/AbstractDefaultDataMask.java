@@ -25,7 +25,9 @@ import static com.tomqi.aop_mask.pojo.MaskMethodInfo.createMethodInfo;
  * @description 对dataMasking的默认实现
  * 每一个继承类对应一个需要被扩展的类
  * 该类的继承类必须以所处理的方法所在的类名加上Mask进行命名,否则继承类无法在MaskContainer中被找到。
- * 该类的继承类，如需生效，请在类上增加Spring的@Component注解
+ * 该类的继承类，如需生效，请使用@MDebug注解
+ *
+ * 最新注意! 实际使用中请使用FastMaskTemplate，实现该类更大的意义是用于开发中更好的支持debug追踪。
  * @date 2020/9/21 10:16
  */
 public abstract class AbstractDefaultDataMask implements DataMask {

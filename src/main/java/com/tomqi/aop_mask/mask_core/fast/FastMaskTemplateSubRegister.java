@@ -1,4 +1,4 @@
-package com.tomqi.aop_mask.mask_core;
+package com.tomqi.aop_mask.mask_core.fast;
 
 import com.tomqi.aop_mask.annotation.MTiming;
 import com.tomqi.aop_mask.annotation.MaskMethod;
@@ -29,9 +29,9 @@ import java.util.Set;
  * @data 2020/10/1823:59
  **/
 @Component
-public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPostProcessor {
+public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostProcessor {
 
-    private static final Logger log               = LoggerFactory.getLogger(FastDataMaskTemplateSubRegister.class);
+    private static final Logger log               = LoggerFactory.getLogger(FastMaskTemplateSubRegister.class);
     private static final String CORE_METHOD_NAME  = "maskData";
     private static final String NEW_CLASS_PACKAGE = "com.tomqi.aop_mask.remark.";
     public static final String  NEW_CLASS_SUFFIX  = "$Mask";
@@ -43,7 +43,7 @@ public class FastDataMaskTemplateSubRegister implements BeanDefinitionRegistryPo
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException  {
         // 查找指定class的子类或实现
-        Set<Class<?>> classes = ClassScanner.scannerAll(FastDataMaskTemplate.class);
+        Set<Class<?>> classes = ClassScanner.scannerAll(FastMaskTemplate.class);
         
         for (Class<?> clazz : classes) {
             ConversionMethodCollector collector = new ConversionMethodCollector();

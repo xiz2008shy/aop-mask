@@ -1,4 +1,4 @@
-import com.tomqi.aop_mask.mask_core.FastDataMaskTemplate;
+import com.tomqi.aop_mask.mask_core.fast.FastMaskTemplate;
 import javassist.*;
 
 
@@ -16,7 +16,7 @@ public class AssistUtils {
         System.out.println(objectArr.length);
     }
 
-    public static Class<?> rewriteMaskTemplate(Class<? extends FastDataMaskTemplate> clazz) throws Exception {
+    public static Class<?> rewriteMaskTemplate(Class<? extends FastMaskTemplate> clazz) throws Exception {
         ClassPool pool = ClassPool.getDefault();
         CtClass originClazz = null;
         try {
