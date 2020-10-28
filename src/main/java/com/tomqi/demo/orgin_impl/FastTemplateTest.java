@@ -5,6 +5,8 @@ import com.tomqi.aop_mask.annotation.MaskOn;
 import com.tomqi.aop_mask.annotation.TimeNode;
 import com.tomqi.aop_mask.mask_core.fast.FastMaskTemplate;
 import com.tomqi.aop_mask.pojo.MaskMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 
 
@@ -18,13 +20,15 @@ import org.springframework.http.ResponseEntity;
 @MaskOn("FastDemoController")
 public class FastTemplateTest extends FastMaskTemplate {
 
+    private static final Logger log = LoggerFactory.getLogger(FastTemplateTest.class);
+
     @MaskMethod("hello")
     @Override
     public void postHandle(MaskMessage message) {
         ResponseEntity<String> res = message.getResult();
         String body = res.getBody();
         message.setAttribute(body + " 经过[postHandle-0]");
-        System.out.println("FastTemplateTest ---> hello方法的 [postHandle-0]--->执行!");
+        log.info("FastTemplateTest ---> hello方法的 [postHandle-0]--->执行!");
     }
 
     /**
@@ -35,12 +39,12 @@ public class FastTemplateTest extends FastMaskTemplate {
     public void postHandle1(MaskMessage message) {
         String body = (String)message.getAttribute();
         message.setResult(ResponseEntity.ok(body + " 经过[postHandle-1]"));
-        System.out.println("FastTemplateTest ---> hello方法的 [postHandle-1]--->执行!");
+        log.info("FastTemplateTest ---> hello方法的 [postHandle-1]--->执行!");
     }
 
 
     @MaskMethod(methodName = "aliasFast",timing = TimeNode.PRE_HANDLE)
     public void fastPerHandle(MaskMessage message) {
-        System.out.println("FastTemplateTest ---> fast方法的 [fastPerHandle]--->执行!");
+        log.info("FastTemplateTest ---> fast方法的 [fastPerHandle]--->执行!");
     }
 }

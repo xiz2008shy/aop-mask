@@ -1,6 +1,8 @@
 package com.tomqi.demo;
 
 import com.tomqi.aop_mask.annotation.Masking;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,11 +20,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("absHello")
 public class AbsDefDemoController {
 
+    private static final Logger log = LoggerFactory.getLogger(AbsDefDemoController.class);
 
     @Masking
     @RequestMapping("world")
     public ResponseEntity<String> hello(@RequestParam("input") String input){
-        System.out.println("AbsDefDemoController ---> hello [Handle]--->执行!");
+        log.info("AbsDefDemoController ---> hello [Handle]--->执行!");
         return ResponseEntity.ok(input);
     }
 
@@ -30,7 +33,7 @@ public class AbsDefDemoController {
     @Masking(alias = "aliasFast")
     @RequestMapping("fast")
     public ResponseEntity<String> fast(@RequestParam("input") String input){
-        System.out.println("AbsDefDemoController ---> fast [Handle]--->执行!");
+        log.info("AbsDefDemoController ---> fast [Handle]--->执行!");
         return ResponseEntity.ok(input);
     }
 

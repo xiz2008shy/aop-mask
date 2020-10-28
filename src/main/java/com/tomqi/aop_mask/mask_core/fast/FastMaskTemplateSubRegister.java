@@ -35,7 +35,6 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
     private static final String CORE_METHOD_NAME  = "maskData";
     private static final String NEW_CLASS_PACKAGE = "com.tomqi.aop_mask.remark.";
     public static final String  NEW_CLASS_SUFFIX  = "$Mask";
-    private static final String MASK_MESSAGE      = "com.tomqi.aop_mask.pojo.MaskMessage";
 
     @Autowired
     private ApplicationContext  applicationContext;
@@ -95,6 +94,8 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
                 // 注册该beanDefinition
                 registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);
 
+                ctClass.detach();
+                assistCreateClazz.detach();
             } catch (Exception e) {
                 log.info("FastDataMaskTemplate子类加载错误!", e);
             }
