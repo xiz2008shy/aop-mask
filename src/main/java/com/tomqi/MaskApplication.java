@@ -15,8 +15,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class MaskApplication {
 
     /**
-     * 启动后可以访问一下地址测试
-     * http://localhost:8080/hello/world?input=anything
+     * 启动后可以访问以下地址测试
+     * http://localhost:8080/fastHello/world?input=anything
+     * http://localhost:8080/absHello/world?input=anything
+     * 两个地址分别采用AOP_MASK的两种使用方式，absHello可以更好的支持方法的debug适用开发阶段，正式使用时 参考fastHello的用法，全程硬编码，具有更高的执行效率
      * @param args
      */
     public static void main(String[] args) {

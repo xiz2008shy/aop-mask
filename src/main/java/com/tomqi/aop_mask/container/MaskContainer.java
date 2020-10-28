@@ -1,6 +1,7 @@
 package com.tomqi.aop_mask.container;
 
 import com.tomqi.aop_mask.Exception.NonMaskException;
+import com.tomqi.aop_mask.annotation.MDebug;
 import com.tomqi.aop_mask.annotation.MaskOn;
 import com.tomqi.aop_mask.mask_core.DataMask;
 import org.apache.commons.lang3.ArrayUtils;
@@ -59,8 +60,12 @@ public class MaskContainer {
      */
     public void putIntoContainer(String beanName, DataMask maskBean){
         MaskOn maskOn = AnnotationUtils.findAnnotation(maskBean.getClass(),MaskOn.class);
+        MDebug mDebug = AnnotationUtils.findAnnotation(maskBean.getClass(), MDebug.class);
         if(Objects.nonNull(maskOn) && StringUtils.isNotBlank(maskOn.value())){
             this.originNameMap.put(maskOn.value(),maskBean);
+        }
+        if(Objects.nonNull(mDebug) && StringUtils.isNotBlank(mDebug.value())){
+            this.originNameMap.put(mDebug.value(),maskBean);
         }
         this.maskSuffixNameMap.put(maskBean.getClass().getSimpleName(),maskBean);
     }

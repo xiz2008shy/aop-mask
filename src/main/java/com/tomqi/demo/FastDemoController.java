@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+
 /**
  * @author TOMQI
  * @Title: Controller
@@ -15,14 +16,14 @@ import org.springframework.web.bind.annotation.RestController;
  **/
 
 @RestController
-@RequestMapping("hello")
-public class DemoController {
+@RequestMapping("fastHello")
+public class FastDemoController {
 
 
     @Masking
     @RequestMapping("world")
     public ResponseEntity<String> hello(@RequestParam("input") String input){
-        System.out.println("hello [Handle]--->执行!");
+        System.out.println("FastDemoController ---> hello [Handle]--->执行!");
         return ResponseEntity.ok(input);
     }
 
@@ -30,7 +31,7 @@ public class DemoController {
     @Masking(alias = "aliasFast")
     @RequestMapping("fast")
     public ResponseEntity<String> fast(@RequestParam("input") String input){
-        System.out.println("fast [Handle]--->执行!");
+        System.out.println("FastDemoController ---> fast [Handle]--->执行!");
         return ResponseEntity.ok(input);
     }
 
