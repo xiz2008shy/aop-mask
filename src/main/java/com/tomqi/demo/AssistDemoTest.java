@@ -1,6 +1,12 @@
+package com.tomqi.demo;
+
 import com.tomqi.aop_mask.mask_core.fast.FastMaskTemplate;
 import com.tomqi.aop_mask.utils.ClassScanner;
 import javassist.*;
+import javassist.bytecode.AnnotationsAttribute;
+import javassist.bytecode.ConstPool;
+import javassist.bytecode.FieldInfo;
+import javassist.bytecode.annotation.Annotation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,13 +34,29 @@ public class AssistDemoTest {
         for (Class<?> clazz : classes) {
 
             ClassPool pool = new ClassPool();
-            Loader jClassLoader = new Loader();
+            pool.importPackage("org.slf4j.Logger");
+            pool.importPackage("org.slf4j.LoggerFactory");
 
             pool.insertClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));
             try {
                 CtClass ctClass = pool.get(clazz.getName());
                 CtClass assistCreateClazz = pool
                         .makeClass(NEW_CLASS_PACKAGE + clazz.getSimpleName().concat(NEW_CLASS_SUFFIX), ctClass);
+
+                // 增加日志变量
+                CtField log = CtField.make("private static final Logger log = LoggerFactory.getLogger("+clazz.getName()+".class);", assistCreateClazz);
+                assistCreateClazz.addField(log);
+
+                // 增加日志线程池变量
+                CtField executor = CtField.make("private com.tomqi.aop_mask.log.LogExecutor logExecutor;", assistCreateClazz);
+                FieldInfo fieldInfo = executor.getFieldInfo();
+                ConstPool constPool = fieldInfo.getConstPool();
+                Annotation autowired = new Annotation("org.springframework.beans.factory.annotation.Autowired", constPool);
+                AnnotationsAttribute annotationsAttribute = new AnnotationsAttribute(constPool, AnnotationsAttribute.visibleTag);
+                annotationsAttribute.addAnnotation(autowired);
+                fieldInfo.addAttribute(annotationsAttribute);
+                assistCreateClazz.addField(executor);
+
 
                 // 构造方法
                 CtConstructor ctConstructor = new CtConstructor(new CtClass[0], assistCreateClazz);

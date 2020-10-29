@@ -2,7 +2,6 @@ package com.tomqi;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cglib.core.DebuggingClassWriter;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
@@ -25,7 +24,6 @@ public class MaskApplication {
      * @param args
      */
     public static void main(String[] args) {
-        System.setProperty(DebuggingClassWriter.DEBUG_LOCATION_PROPERTY, "D:\\Java\\JavaProjects\\aop-mask");
         SpringApplication.run(MaskApplication.class, args);
     }
 }

@@ -1,25 +1,24 @@
 package com.tomqi.aop_mask.mask_core.fast;
 
-import com.tomqi.aop_mask.annotation.MTiming;
-import com.tomqi.aop_mask.annotation.MaskMethod;
-import com.tomqi.aop_mask.annotation.TimeNode;
+import com.tomqi.aop_mask.annotation.*;
+import com.tomqi.aop_mask.log.LogBodyMaker;
 import com.tomqi.aop_mask.utils.ClassScanner;
 import javassist.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.type.MethodMetadata;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-
 
 /**
  * @author TOMQI
@@ -32,7 +31,7 @@ import java.util.Set;
 public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostProcessor {
 
     private static final Logger log               = LoggerFactory.getLogger(FastMaskTemplateSubRegister.class);
-    private static final String CORE_METHOD_NAME  = "maskData";
+    public static final String CORE_METHOD_NAME  = "maskData";
     private static final String NEW_CLASS_PACKAGE = "com.tomqi.aop_mask.remark.";
     public static final String  NEW_CLASS_SUFFIX  = "$Mask";
 
@@ -40,49 +39,59 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
     private ApplicationContext  applicationContext;
 
     @Override
-    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException  {
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
         // 查找指定class的子类或实现
         Set<Class<?>> classes = ClassScanner.scannerAll(FastMaskTemplate.class);
-        
-        for (Class<?> clazz : classes) {
-            ConversionMethodCollector collector = new ConversionMethodCollector();
-            Method[] clazzMethods = clazz.getDeclaredMethods();
-            for (Method method : clazzMethods) {
-                collector.putMethod(method);
-            }
 
+        for (Class<?> clazz : classes) {
+            // 创建clazz中 影响maskData方法 的 信息收集器
+            ConversionMethodCollector collector = new ConversionMethodCollector();
+            collector.collectFromClass(clazz);
+            // 获取所有与maskDate相关的方法的方法名
             Set<String> originMethodNames = collector.getOriginMethodNames();
 
             ClassPool pool = new ClassPool();
             pool.insertClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));
+            pool.importPackage("org.slf4j.Logger");
+            pool.importPackage("org.slf4j.LoggerFactory");
             try {
                 CtClass ctClass = pool.get(clazz.getName());
                 CtClass assistCreateClazz = pool
                         .makeClass(NEW_CLASS_PACKAGE + clazz.getSimpleName().concat(NEW_CLASS_SUFFIX), ctClass);
 
+                // 添加Logger相关的成员变量
+                boolean logFlag = collector.logMode != LogMode.OFF;
+                if (logFlag) {
+                    LogBodyMaker.makeLogMember(assistCreateClazz, clazz);
+                }
+
+                // 处理MLog的ALLIN模式
+                if (collector.logMode == LogMode.ALLIN) {
+                    LogBodyMaker.addExecuteLogForNormalMethod(ctClass,assistCreateClazz);
+                }
+
                 // 构造方法
                 CtConstructor ctConstructor = new CtConstructor(new CtClass[0], assistCreateClazz);
-                ctConstructor.setBody("{ System.out.println(\"success create " + assistCreateClazz.getSimpleName() + "!\");}");
+                ctConstructor.setBody(
+                        "{ System.out.println(\"success create " + assistCreateClazz.getSimpleName() + "!\");}");
                 assistCreateClazz.addConstructor(ctConstructor);
 
                 // 准备重写maskData方法
-                CtMethod method = ctClass.getMethod(CORE_METHOD_NAME,"(Lcom/tomqi/aop_mask/pojo/MaskMessage;)Ljava/lang/Object;");
+                CtMethod method = ctClass.getMethod(CORE_METHOD_NAME,
+                        "(Lcom/tomqi/aop_mask/pojo/MaskMessage;)Ljava/lang/Object;");
                 CtMethod subMaskData = CtNewMethod.copy(method, assistCreateClazz, null);
 
                 StringBuilder methodText = new StringBuilder();
-
-                //这里写入maskData的具体的执行代码
-                
                 methodText.append("{\n");
-                MaskClazzMaker.methodBodyCreate(originMethodNames,methodText,collector);
+                // 这里写入maskData的具体的执行代码
+                MaskBodyMaker.methodBodyCreate(originMethodNames,assistCreateClazz.getName(), methodText, collector,logFlag);
                 methodText.append("}");
                 subMaskData.setBody(methodText.toString());
                 assistCreateClazz.addMethod(subMaskData);
 
-                //是否生成class文件
-                if (true) {
-                    assistCreateClazz.writeFile(ClassScanner.rootPath());
-                }
+                // 生成class文件
+                assistCreateClazz.writeFile(ClassScanner.rootPath());
+
 
                 Class<?> assistClazz = assistCreateClazz.toClass();
 
@@ -101,8 +110,6 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
             }
         }
     }
-
-
 
     /**
      * MethodNode-方法中的重要信息用此对象封装
@@ -198,6 +205,7 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
         private boolean                 isHandleDone     = false;
 
         private int                     handleNodeLength = 0;
+
     }
 
     /**
@@ -220,6 +228,20 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
 
         protected boolean                    isHandleFinish      = false;
 
+        private LogMode                      logMode             = LogMode.OFF;
+
+        protected void collectFromClass(Class<?> clazz) {
+            MLog mLogAnn = AnnotationUtils.findAnnotation(clazz, MLog.class);
+            if (mLogAnn != null) {
+                this.logMode = mLogAnn.logMode();
+            }
+            Method[] clazzMethods = clazz.getDeclaredMethods();
+            // 遍历所有method，收集有效信息
+            for (Method method : clazzMethods) {
+                putMethod(method);
+            }
+        }
+
         protected void putMethod(Method method) {
             MaskMethod maskMethodAnn = AnnotationUtils.findAnnotation(method, MaskMethod.class);
             // 没有@MaskMethod注解的方法，不处理
@@ -227,6 +249,7 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
                 return;
             }
             String originMethodName = maskMethodAnn.methodName();
+
             MTiming mTimingAnn = AnnotationUtils.findAnnotation(method, MTiming.class);
             TimeNode timing = maskMethodAnn.timing();
             int order = maskMethodAnn.order();
@@ -410,8 +433,19 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
 
     }
 
+    private MethodMetadata findMethodMetadata(Set<MethodMetadata> annotatedMethods, String originMethodName) {
+        Iterator<MethodMetadata> iterator = annotatedMethods.iterator();
+        while (iterator.hasNext()) {
+            MethodMetadata md = iterator.next();
+            if (md.getMethodName().equals(originMethodName)) {
+                return md;
+            }
+        }
+        return null;
+    }
+
     @Override
-    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
         //这里不处理
     }
 

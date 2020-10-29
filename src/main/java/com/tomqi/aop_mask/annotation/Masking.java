@@ -33,5 +33,4 @@ public @interface Masking {
      */
     boolean onlyValid () default false;
 
-    LogMode logMode () default LogMode.OFF;
 }

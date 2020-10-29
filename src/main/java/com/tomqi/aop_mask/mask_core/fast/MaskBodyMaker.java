@@ -12,17 +12,20 @@ import java.util.Set;
  * @description 具体的dataMask方法的动态编辑工具类
  * @date 2020/10/23 19:15
  */
-public class MaskClazzMaker {
+public class MaskBodyMaker {
 
-    private MaskClazzMaker() {
+    private MaskBodyMaker() {
     }
 
-    public static void methodBodyCreate(Set<String> originMethodNames, StringBuilder methodText, FastMaskTemplateSubRegister.ConversionMethodCollector collector) {
+    public static void methodBodyCreate(Set<String> originMethodNames,String className, StringBuilder methodText, FastMaskTemplateSubRegister.ConversionMethodCollector collector,boolean log) {
 
         if (originMethodNames.isEmpty()) {
             return;
         }
-
+        if (log) {
+            methodText.append("long start$ = System.currentTimeMillis();\n");
+        }
+        // 类中masking修饰的方法只存在一个时
         if (originMethodNames.size() == 1) {
             Iterator<String> iterator = originMethodNames.iterator();
             String methodName = iterator.next();
@@ -31,6 +34,7 @@ public class MaskClazzMaker {
                 oneMethodHandle(methodText,collector);
             }
         } else {
+            //存在多个masking修饰的方法时
             methodText.append("String methodName = $1.getMethodName();\n");
             methodText.append("switch(methodName){\n");
             for (String name : originMethodNames) {
@@ -43,6 +47,14 @@ public class MaskClazzMaker {
                 methodText.append("break;\n");
             }
             methodText.append("}\n");
+        }
+        if (log) {
+            methodText.append("long end$ = System.currentTimeMillis();\n")
+                    .append("$0.logExecutor.asyncLog(")
+                    .append(className)
+                    .append(".log,\"")
+                    .append("maskData")
+                    .append("\",end$-start$,$1.getMethodArgs(),$1.getResult());");
         }
         methodText.append("return $1.getResult();\n");
     }
