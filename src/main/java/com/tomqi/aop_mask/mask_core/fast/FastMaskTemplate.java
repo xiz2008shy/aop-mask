@@ -4,8 +4,7 @@ import com.tomqi.aop_mask.annotation.MTiming;
 import com.tomqi.aop_mask.annotation.TimeNode;
 import com.tomqi.aop_mask.mask_core.DataMask;
 import com.tomqi.aop_mask.pojo.MaskMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 
 /**
  * @author TOMQI
@@ -16,14 +15,16 @@ import org.slf4j.LoggerFactory;
  **/
 public class FastMaskTemplate implements DataMask {
 
-    private static final Logger log = LoggerFactory.getLogger(FastMaskTemplate.class);
+    public static final FastMaskTemplate instance = new FastMaskTemplate();
 
     @MTiming(TimeNode.BEFORE_PRE_HANDLE )
     public void beforePreHandle(MaskMessage message) {
+        // 使用时重写
     }
 
     @MTiming(TimeNode.PRE_HANDLE )
     public void preHandle(MaskMessage message) {
+        // 使用时重写
     }
 
     @MTiming(TimeNode.HANDLE )
@@ -35,10 +36,12 @@ public class FastMaskTemplate implements DataMask {
 
     @MTiming(TimeNode.POST_HANDLE )
     public void postHandle(MaskMessage message) {
+        // 使用时重写
     }
 
     @MTiming(TimeNode.AFTER_POST_HANDLE )
     public void afterPostHandle(MaskMessage message) {
+        // 使用时重写
     }
 
     @Override

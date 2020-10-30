@@ -5,6 +5,7 @@ import com.tomqi.aop_mask.annotation.Masking;
 import com.tomqi.aop_mask.container.MValidatorHandlerContainer;
 import com.tomqi.aop_mask.container.MaskContainer;
 import com.tomqi.aop_mask.mask_core.DataMask;
+import com.tomqi.aop_mask.mask_core.fast.FastMaskTemplate;
 import com.tomqi.aop_mask.pojo.MValidatorResult;
 import com.tomqi.aop_mask.pojo.MaskMessage;
 import com.tomqi.aop_mask.utils.MaskContext;
@@ -50,7 +51,8 @@ public class MaskingAop {
 
             // mainProcess
             if (masking.onlyValid()) {
-                return message.setJoinPoint(joinPoint).proceed();
+                FastMaskTemplate.instance.handle(message);
+                return message.getResult();
             }else {
                 String simpleClassName = message.getSimpleClassName();
                 DataMask dataMask = maskingStrategies.getMask(simpleClassName);

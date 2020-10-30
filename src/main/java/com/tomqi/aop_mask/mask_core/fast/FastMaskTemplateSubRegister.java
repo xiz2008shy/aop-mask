@@ -10,7 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.*;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.EnvironmentAware;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.env.Environment;
 import org.springframework.core.type.MethodMetadata;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -28,18 +30,26 @@ import java.util.Set;
  * @data 2020/10/1823:59
  **/
 @Component
-public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostProcessor {
+public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostProcessor, EnvironmentAware {
 
     private static final Logger log               = LoggerFactory.getLogger(FastMaskTemplateSubRegister.class);
     public static final String CORE_METHOD_NAME  = "maskData";
     private static final String NEW_CLASS_PACKAGE = "com.tomqi.aop_mask.remark.";
     public static final String  NEW_CLASS_SUFFIX  = "$Mask";
 
+    private Environment env;
+
+    @Override
+    public void setEnvironment(Environment environment) {
+        this.env = environment;
+    }
+
     @Autowired
     private ApplicationContext  applicationContext;
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
+        boolean writeClassFile = env.getProperty("Mask.writeClassFile", boolean.class, false);
         // 查找指定class的子类或实现
         Set<Class<?>> classes = ClassScanner.scannerAll(FastMaskTemplate.class);
 
@@ -90,8 +100,9 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
                 assistCreateClazz.addMethod(subMaskData);
 
                 // 生成class文件
-                assistCreateClazz.writeFile(ClassScanner.rootPath());
-
+                if (writeClassFile) {
+                    assistCreateClazz.writeFile(ClassScanner.rootPath());
+                }
 
                 Class<?> assistClazz = assistCreateClazz.toClass();
 
