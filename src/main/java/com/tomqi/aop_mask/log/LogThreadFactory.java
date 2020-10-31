@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 360 Financial Copyright
  *
  * @author YanWenqi
- * @description
+ * @description MLog异步日志的线程工程
  * @date 2020/10/28 18:17
  */
 public class LogThreadFactory implements ThreadFactory {
@@ -18,7 +18,6 @@ public class LogThreadFactory implements ThreadFactory {
     private final String namePrefix;
 
     public LogThreadFactory() {
-        SecurityManager securityManager = System.getSecurityManager();
         group = new ThreadGroup("MLog-Group");
         this.namePrefix = "MLog-Thread";
     }

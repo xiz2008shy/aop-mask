@@ -6,8 +6,6 @@ import com.tomqi.aop_mask.annotation.MaskOn;
 import com.tomqi.aop_mask.mask_core.DataMask;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -23,10 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class MaskContainer {
 
-    private static final Logger log = LoggerFactory.getLogger(MaskContainer.class);
-
-    private Map<String,DataMask> originNameMap = new ConcurrentHashMap(16);
-    private Map<String,DataMask> maskSuffixNameMap = new ConcurrentHashMap(16);
+    private Map<String,DataMask> originNameMap = new ConcurrentHashMap<>(16);
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -38,49 +33,49 @@ public class MaskContainer {
     /**
      * 容器的初始化方法，由spring调用
      */
-    private void initContainer() {
+    public void initContainer() {
         MaskContainer maskingStrategies = applicationContext.getBean(MASKING_STRATEGY_CONTAINER_BEAN_NAME,
                 MaskContainer.class);
         String[] beanNames = applicationContext.getBeanNamesForType(DataMask.class);
         if (ArrayUtils.isNotEmpty(beanNames)){
             for (String beanName:beanNames) {
                 DataMask maskBean = (DataMask)applicationContext.getBean(beanName);
-                maskingStrategies.putIntoContainer(beanName,maskBean);
+                maskingStrategies.putIntoContainer(maskBean);
             }
         }
-
     }
 
 
 
     /**
      * 将key和value方法对应的容器中，自动处理两个容器的key值
-     * @param beanName
      * @param maskBean
      */
-    public void putIntoContainer(String beanName, DataMask maskBean){
+    public void putIntoContainer( DataMask maskBean){
         MaskOn maskOn = AnnotationUtils.findAnnotation(maskBean.getClass(),MaskOn.class);
         MDebug mDebug = AnnotationUtils.findAnnotation(maskBean.getClass(), MDebug.class);
         if(Objects.nonNull(maskOn) && StringUtils.isNotBlank(maskOn.value())){
             this.originNameMap.put(maskOn.value(),maskBean);
+            return;
         }
+
         if(Objects.nonNull(mDebug) && StringUtils.isNotBlank(mDebug.value())){
             this.originNameMap.put(mDebug.value(),maskBean);
+            return;
         }
-        this.maskSuffixNameMap.put(maskBean.getClass().getSimpleName(),maskBean);
+
+        String simpleName = maskBean.getClass().getSimpleName();
+        this.originNameMap.put(simpleName.substring(0,simpleName.lastIndexOf("$")),maskBean);
     }
 
     /**
-     * 从容器中取出mask，优先在originNameMap中查找bean
+     * 从容器中取出mask，在originNameMap中查找MaskBean
      * @param key
      * @return
      * @throws NonMaskException
      */
     public DataMask getMask(String key) throws NonMaskException{
         DataMask mask = this.originNameMap.get(key);
-        if (Objects.isNull(mask)){
-            mask = this.maskSuffixNameMap.get(key.concat(MASKING_SUFFIX));
-        }
         if (Objects.isNull(mask)) {
             throw new NonMaskException(key);
         }

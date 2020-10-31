@@ -1,9 +1,13 @@
 package com.tomqi.aop_mask.utils;
 
+import com.tomqi.aop_mask.annotation.MLog;
+import com.tomqi.aop_mask.annotation.MaskOn;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -21,45 +25,48 @@ public class ClassScanner {
     /**
      * 项目类路径下，查找特定类的所有子类或实现类
      * @param filterClass 指定的特定类
-     * @return
+     * @param classSet 用于收集@MLog标注的class
+     * @return map中value存FastMaskTemplate的子类class，key存该class注解@MaskOn的value（即被mask的原类名）
      */
-    public static Set<Class<?>> scannerAll(Class<?> filterClass){
+    public static Map<String,Class<?>> scannerAll(Class<?> filterClass, Set<Class<?>> classSet){
         String rootPath = rootPath();
         File rootDir = new File(rootPath);
-        Set<Class<?>> clazzSet = new HashSet<>();
+        Map<String,Class<?>> clazzMap = new HashMap<>();
         if (!rootDir.isDirectory()){
-            return clazzSet;
+            return clazzMap;
         }
-        doScanner(rootDir,clazzSet,rootPath,filterClass);
-        return clazzSet;
+        doScanner(rootDir,clazzMap,classSet,rootPath,filterClass);
+        return clazzMap;
     }
 
-    private static void doScanner(File dir,Set<Class<?>> set,String rootPath,Class<?> filterClass){
+
+    private static void doScanner(File dir,Map<String,Class<?>> clazzMap,Set<Class<?>> classSet,String rootPath,Class<?> filterClass){
         dir.listFiles(file->{
             if (file.getName().endsWith(".class")){
-                clazzAddSet(file,set,rootPath,filterClass);
+                clazzAddMap(file,clazzMap,classSet,rootPath,filterClass);
             }else if(file.isDirectory()) {
-                doScanner(file,set,rootPath,filterClass);
+                doScanner(file,clazzMap,classSet,rootPath,filterClass);
             }
             return false;
         });
-
     }
 
-    public static void clazzAddSet (File file,Set<Class<?>> set,String rootPath,Class<?> filterClass){
+
+    public static void clazzAddMap (File file,Map<String,Class<?>> clazzMap,Set<Class<?>> classSet,String rootPath,Class<?> filterClass){
         String absolutePath = file.getAbsolutePath();
         absolutePath = absolutePath.substring(rootPath.length()-1,absolutePath.lastIndexOf("."));
         String fullName = absolutePath.replace(File.separator,".");
-
         try {
             Class<?> clazz = Class.forName(fullName);
             if (filterClass.isAssignableFrom(clazz) && !clazz.equals(filterClass)) {
-                set.add(clazz);
+                MaskOn maskOn = clazz.getAnnotation(MaskOn.class);
+                clazzMap.put(maskOn.value(),clazz);
+            }else if (clazz.getAnnotation(MLog.class) != null) {
+                classSet.add(clazz);
             }
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-
     }
 
 

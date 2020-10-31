@@ -50,14 +50,10 @@ public class MaskingAop {
             }
 
             // mainProcess
-            if (masking.onlyValid()) {
-                FastMaskTemplate.instance.handle(message);
-                return message.getResult();
-            }else {
-                String simpleClassName = message.getSimpleClassName();
-                DataMask dataMask = maskingStrategies.getMask(simpleClassName);
-                return dataMask.maskData(message);
-            }
+            String simpleClassName = message.getSimpleClassName();
+            DataMask dataMask = maskingStrategies.getMask(simpleClassName);
+            return dataMask.maskData(message);
+
         } finally {
             MaskContext.remover();
         }
