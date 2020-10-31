@@ -52,73 +52,82 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
         boolean writeClassFile = env.getProperty("Mask.writeClassFile", boolean.class, false);
         // 查找指定class的子类或实现
         Set<Class<?>> classes = ClassScanner.scannerAll(FastMaskTemplate.class);
-
         for (Class<?> clazz : classes) {
-            // 创建clazz中 影响maskData方法 的 信息收集器
-            ConversionMethodCollector collector = new ConversionMethodCollector();
-            collector.collectFromClass(clazz);
-            // 获取所有与maskDate相关的方法的方法名
-            Set<String> originMethodNames = collector.getOriginMethodNames();
+            rewriteMaskData(registry, writeClassFile, clazz);
+        }
+    }
 
-            ClassPool pool = new ClassPool();
-            pool.insertClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));
-            pool.importPackage("org.slf4j.Logger");
-            pool.importPackage("org.slf4j.LoggerFactory");
-            try {
-                CtClass ctClass = pool.get(clazz.getName());
-                CtClass assistCreateClazz = pool
-                        .makeClass(NEW_CLASS_PACKAGE + clazz.getSimpleName().concat(NEW_CLASS_SUFFIX), ctClass);
+    /**
+     * 这里重写maskData方法
+     * @param registry
+     * @param writeClassFile
+     * @param clazz
+     */
+    private void rewriteMaskData(BeanDefinitionRegistry registry, boolean writeClassFile, Class<?> clazz) {
+        // 创建clazz中 影响maskData方法 的 信息收集器
+        ConversionMethodCollector collector = new ConversionMethodCollector();
+        collector.collectFromClass(clazz);
+        // 获取所有与maskDate相关的方法的方法名
+        Set<String> originMethodNames = collector.getOriginMethodNames();
 
-                // 添加Logger相关的成员变量
-                boolean logFlag = collector.logMode != LogMode.OFF;
-                if (logFlag) {
-                    LogBodyMaker.makeLogMember(assistCreateClazz, clazz);
-                }
+        ClassPool pool = new ClassPool();
+        pool.insertClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));
+        pool.importPackage("org.slf4j.Logger");
+        pool.importPackage("org.slf4j.LoggerFactory");
+        try {
+            CtClass ctClass = pool.get(clazz.getName());
+            CtClass assistCreateClazz = pool
+                    .makeClass(NEW_CLASS_PACKAGE + clazz.getSimpleName().concat(NEW_CLASS_SUFFIX), ctClass);
 
-                // 处理MLog的ALLIN模式
-                if (collector.logMode == LogMode.ALLIN) {
-                    LogBodyMaker.addExecuteLogForNormalMethod(ctClass,assistCreateClazz);
-                }
-
-                // 构造方法
-                CtConstructor ctConstructor = new CtConstructor(new CtClass[0], assistCreateClazz);
-                ctConstructor.setBody(
-                        "{ System.out.println(\"success create " + assistCreateClazz.getSimpleName() + "!\");}");
-                assistCreateClazz.addConstructor(ctConstructor);
-
-                // 准备重写maskData方法
-                CtMethod method = ctClass.getMethod(CORE_METHOD_NAME,
-                        "(Lcom/tomqi/aop_mask/pojo/MaskMessage;)Ljava/lang/Object;");
-                CtMethod subMaskData = CtNewMethod.copy(method, assistCreateClazz, null);
-
-                StringBuilder methodText = new StringBuilder();
-                methodText.append("{\n");
-                // 这里写入maskData的具体的执行代码
-                MaskBodyMaker.methodBodyCreate(originMethodNames,assistCreateClazz.getName(), methodText, collector,logFlag);
-                methodText.append("}");
-                subMaskData.setBody(methodText.toString());
-                assistCreateClazz.addMethod(subMaskData);
-
-                // 生成class文件
-                if (writeClassFile) {
-                    assistCreateClazz.writeFile(ClassScanner.rootPath());
-                }
-
-                Class<?> assistClazz = assistCreateClazz.toClass();
-
-                // 定义beanDefition
-                BeanDefinitionBuilder maskBDBuilder = BeanDefinitionBuilder.genericBeanDefinition(assistClazz);
-                GenericBeanDefinition beanDefinition = (GenericBeanDefinition) maskBDBuilder.getBeanDefinition();
-
-                String simpleName = assistClazz.getSimpleName();
-                // 注册该beanDefinition
-                registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);
-
-                ctClass.detach();
-                assistCreateClazz.detach();
-            } catch (Exception e) {
-                log.info("FastDataMaskTemplate子类加载错误!", e);
+            // 添加Logger相关的成员
+            boolean logFlag = collector.logMode != LogMode.OFF;
+            if (logFlag) {
+                LogBodyMaker.makeLogMember(assistCreateClazz, clazz);
             }
+
+            // 处理MLog的ALLIN模式
+            if (collector.logMode == LogMode.ALLIN) {
+                LogBodyMaker.addExecuteLogForNormalMethod(ctClass,assistCreateClazz);
+            }
+
+            // 构造方法
+            CtConstructor ctConstructor = new CtConstructor(new CtClass[0], assistCreateClazz);
+            ctConstructor.setBody(
+                    "{ System.out.println(\"success create " + assistCreateClazz.getSimpleName() + "!\");}");
+            assistCreateClazz.addConstructor(ctConstructor);
+
+            // 准备重写maskData方法
+            CtMethod method = ctClass.getMethod(CORE_METHOD_NAME,
+                    "(Lcom/tomqi/aop_mask/pojo/MaskMessage;)Ljava/lang/Object;");
+            CtMethod subMaskData = CtNewMethod.copy(method, assistCreateClazz, null);
+
+            StringBuilder methodText = new StringBuilder();
+            methodText.append("{\n");
+            // 这里写入maskData的具体的执行代码
+            MaskBodyMaker.methodBodyCreate(originMethodNames,assistCreateClazz.getName(), methodText, collector,logFlag);
+            methodText.append("}");
+            subMaskData.setBody(methodText.toString());
+            assistCreateClazz.addMethod(subMaskData);
+
+            // 生成class文件
+            if (writeClassFile) {
+                assistCreateClazz.writeFile(ClassScanner.rootPath());
+            }
+
+            Class<?> assistClazz = assistCreateClazz.toClass();
+
+            // 定义beanDefition
+            BeanDefinitionBuilder maskBDBuilder = BeanDefinitionBuilder.genericBeanDefinition(assistClazz);
+            GenericBeanDefinition beanDefinition = (GenericBeanDefinition) maskBDBuilder.getBeanDefinition();
+
+            String simpleName = assistClazz.getSimpleName();
+            // 注册该beanDefinition
+            registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);
+
+            ctClass.detach();
+            assistCreateClazz.detach();
+        } catch (Exception e) {
+            log.info("FastDataMaskTemplate子类加载错误!", e);
         }
     }
 

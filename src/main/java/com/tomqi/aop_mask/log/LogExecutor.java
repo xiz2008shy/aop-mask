@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -29,14 +30,17 @@ public class LogExecutor {
         this.executor = executor;
     }
 
-
-    public void asyncLog (Logger log, String methodName, long time, Object in, Object out) {
-        try {
-            String receive = objectMapper.writeValueAsString(in);
-            String output = objectMapper.writeValueAsString(out);
-            CompletableFuture.runAsync(()-> log.info("[{}]方法耗时:[{}]毫秒,入参={},出参={}",methodName,time,receive,output) ,executor);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
+    public void asyncLog(Logger log, String methodName, long time, Object in, Object out) {
+        CompletableFuture.runAsync(() -> {
+            String receive = null;
+            String output = null;
+            try {
+                receive = objectMapper.writeValueAsString(in);
+                output = objectMapper.writeValueAsString(out);
+            } catch (JsonProcessingException e) {
+                log.info("[{}]方法耗时:[{}]毫秒,入参={},出参={}", methodName, time, in, out);
+            }
+            log.info("[{}]方法耗时:[{}]毫秒,入参={},出参={}", methodName, time, receive, output);
+        }, executor);
     }
 }

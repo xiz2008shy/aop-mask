@@ -1,10 +1,17 @@
 package com.tomqi.aop_mask.log;
 
+import com.tomqi.aop_mask.Exception.NonMaskMethodException;
+import com.tomqi.aop_mask.annotation.MaskMethod;
 import javassist.*;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.ConstPool;
 import javassist.bytecode.FieldInfo;
+import javassist.bytecode.MethodInfo;
 import javassist.bytecode.annotation.Annotation;
+import javassist.bytecode.annotation.MemberValue;
+import org.apache.commons.lang3.StringUtils;
+
+import java.lang.reflect.Proxy;
 
 import static com.tomqi.aop_mask.mask_core.fast.FastMaskTemplateSubRegister.CORE_METHOD_NAME;
 
@@ -51,12 +58,23 @@ public class LogBodyMaker {
      * @param assistCreateClazz
      * @throws CannotCompileException
      */
-    public static void addExecuteLogForNormalMethod (CtClass originClass,CtClass assistCreateClazz) throws CannotCompileException {
+    public static void addExecuteLogForNormalMethod (CtClass originClass,CtClass assistCreateClazz) throws CannotCompileException,NonMaskMethodException  {
         CtMethod[] ctMethods = originClass.getDeclaredMethods();
         for (CtMethod ctMethod : ctMethods) {
             if (ctMethod.getName().equals(CORE_METHOD_NAME)) {
                 continue;
             }
+            String originMethodName = "";
+            try {
+                MaskMethod annotation = (MaskMethod)ctMethod.getAnnotation(MaskMethod.class);
+                originMethodName = annotation.value();
+                if (StringUtils.isBlank(originMethodName)){
+                    originMethodName = annotation.methodName();
+                }
+            }catch (Exception e){
+                throw new NonMaskMethodException(new StringBuilder(ctMethod.getLongName()).append("缺少@MaskMethod注解").toString());
+            }
+
             CtMethod copy = CtNewMethod.copy(ctMethod, assistCreateClazz, null);
             StringBuilder sb = new StringBuilder();
             sb.append("{long start$ = System.currentTimeMillis();\n")
@@ -67,6 +85,8 @@ public class LogBodyMaker {
                     .append("$0.logExecutor.asyncLog(")
                     .append(assistCreateClazz.getName())
                     .append(".log,\"")
+                    .append(originMethodName)
+                    .append("-")
                     .append(copy.getName())
                     .append("\",end$-start$,$1.getMethodArgs(),$1.getResult());}");
             copy.setBody(sb.toString());

@@ -17,17 +17,17 @@ public class MaskBodyMaker {
     private MaskBodyMaker() {
     }
 
-    public static void methodBodyCreate(Set<String> originMethodNames,String className, StringBuilder methodText, FastMaskTemplateSubRegister.ConversionMethodCollector collector,boolean log) {
+    public static void methodBodyCreate(Set<String> superMethodNames,String className, StringBuilder methodText, FastMaskTemplateSubRegister.ConversionMethodCollector collector,boolean log) {
 
-        if (originMethodNames.isEmpty()) {
+        if (superMethodNames.isEmpty()) {
             return;
         }
         if (log) {
             methodText.append("long start$ = System.currentTimeMillis();\n");
         }
         // 类中masking修饰的方法只存在一个时
-        if (originMethodNames.size() == 1) {
-            Iterator<String> iterator = originMethodNames.iterator();
+        if (superMethodNames.size() == 1) {
+            Iterator<String> iterator = superMethodNames.iterator();
             String methodName = iterator.next();
 
             while (collector.hasNextNode(methodName)) {
@@ -37,7 +37,7 @@ public class MaskBodyMaker {
             //存在多个masking修饰的方法时
             methodText.append("String methodName = $1.getMethodName();\n");
             methodText.append("switch(methodName){\n");
-            for (String name : originMethodNames) {
+            for (String name : superMethodNames) {
                 methodText.append("case \"");
                 methodText.append(name);
                 methodText.append("\": \n");

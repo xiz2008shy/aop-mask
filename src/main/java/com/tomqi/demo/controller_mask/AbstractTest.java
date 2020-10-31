@@ -1,4 +1,4 @@
-package com.tomqi.demo.orgin_impl;
+package com.tomqi.demo.controller_mask;
 
 import com.tomqi.aop_mask.annotation.MDebug;
 import com.tomqi.aop_mask.annotation.MaskMethod;
@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
  * @Title: TestMask
  * @ProjectName: aop_mask
  * @Description :一个mask策略的示例，对DemoController类的hello方法进行修饰。
- * @data 2020/10/1821:27
+ * @data 2020/10/18 21:27
  **/
 @MDebug("AbsDefDemoController")
 public class AbstractTest extends AbstractDefaultDataMask {

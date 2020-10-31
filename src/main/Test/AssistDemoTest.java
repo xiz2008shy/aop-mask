@@ -1,5 +1,3 @@
-package com.tomqi.demo;
-
 import com.tomqi.aop_mask.mask_core.fast.FastMaskTemplate;
 import com.tomqi.aop_mask.utils.ClassScanner;
 import javassist.*;

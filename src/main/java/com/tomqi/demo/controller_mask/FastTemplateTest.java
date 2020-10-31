@@ -1,10 +1,8 @@
-package com.tomqi.demo.orgin_impl;
+package com.tomqi.demo.controller_mask;
 
 import com.tomqi.aop_mask.annotation.*;
 import com.tomqi.aop_mask.mask_core.fast.FastMaskTemplate;
 import com.tomqi.aop_mask.pojo.MaskMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 
 

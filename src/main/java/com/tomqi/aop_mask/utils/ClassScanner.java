@@ -53,7 +53,7 @@ public class ClassScanner {
 
         try {
             Class<?> clazz = Class.forName(fullName);
-            if (filterClass.isAssignableFrom(clazz) && !clazz.equals(filterClass)){
+            if (filterClass.isAssignableFrom(clazz) && !clazz.equals(filterClass)) {
                 set.add(clazz);
             }
         } catch (ClassNotFoundException e) {

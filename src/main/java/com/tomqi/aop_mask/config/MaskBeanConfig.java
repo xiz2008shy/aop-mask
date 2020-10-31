@@ -60,9 +60,7 @@ public class MaskBeanConfig {
         return new LogExecutor(new ThreadPoolExecutor(corePoolSize, maximumPoolSize, keepAliveTime, timeUnit,
                 new ArrayBlockingQueue<>(blockQueueLimit), new LogThreadFactory(),
                 new ThreadPoolExecutor.CallerRunsPolicy()));
-        /*
-         * } return new LogExecutor();
-         */
+
     }
 
 }
