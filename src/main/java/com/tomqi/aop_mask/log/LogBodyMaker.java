@@ -6,13 +6,8 @@ import javassist.*;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.ConstPool;
 import javassist.bytecode.FieldInfo;
-import javassist.bytecode.MethodInfo;
 import javassist.bytecode.annotation.Annotation;
-import javassist.bytecode.annotation.MemberValue;
 import org.apache.commons.lang3.StringUtils;
-
-import java.lang.reflect.Proxy;
-
 import static com.tomqi.aop_mask.mask_core.fast.FastMaskTemplateSubRegister.CORE_METHOD_NAME;
 
 /**
@@ -39,7 +34,7 @@ public class LogBodyMaker {
         ctClass.addField(log);
 
         // 增加日志线程池变量
-        CtField logExecutor = CtField.make("private com.tomqi.aop_mask.log.LogExecutor logExecutor;", ctClass);
+        CtField logExecutor = CtField.make("private com.tomqi.aop_mask.log.executor.LogExecutor logExecutor;", ctClass);
         FieldInfo fieldInfo = logExecutor.getFieldInfo();
         ConstPool constPool = fieldInfo.getConstPool();
 
@@ -82,11 +77,11 @@ public class LogBodyMaker {
                     .append(copy.getName())
                     .append("($1);\n")
                     .append("long end$ = System.currentTimeMillis();\n")
-                    .append("$0.logExecutor.asyncLog(")
+                    .append("$0.logExecutor.executeLog(")
                     .append(assistCreateClazz.getName())
                     .append(".log,\"")
                     .append(originMethodName)
-                    .append("-")
+                    .append("]-[")
                     .append(copy.getName())
                     .append("\",end$-start$,$1.getMethodArgs(),$1.getResult());}");
             copy.setBody(sb.toString());

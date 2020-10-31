@@ -50,9 +50,9 @@ public class MaskBodyMaker {
         }
         if (log) {
             methodText.append("long end$ = System.currentTimeMillis();\n")
-                    .append("$0.logExecutor.asyncLog(")
+                    .append("$0.logExecutor.executeLog(")
                     .append(className)
-                    .append(".log,\"")
+                    .append(".log,$1.getMethodName(),\"")
                     .append("maskData")
                     .append("\",end$-start$,$1.getMethodArgs(),$1.getResult());");
         }

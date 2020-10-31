@@ -8,6 +8,8 @@ import javassist.bytecode.annotation.Annotation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -27,9 +29,9 @@ public class AssistDemoTest {
 
     public static void main(String[] args) {
         // 查找指定class的子类或实现
-        Set<Class<?>> classes = ClassScanner.scannerAll(FastMaskTemplate.class);
+        Map<String,Class<?>> classes = ClassScanner.scannerAll(FastMaskTemplate.class,new HashSet<>());
 
-        for (Class<?> clazz : classes) {
+        for (Class<?> clazz : classes.values()) {
 
             ClassPool pool = new ClassPool();
             pool.importPackage("org.slf4j.Logger");
@@ -46,7 +48,7 @@ public class AssistDemoTest {
                 assistCreateClazz.addField(log);
 
                 // 增加日志线程池变量
-                CtField executor = CtField.make("private com.tomqi.aop_mask.log.LogExecutor logExecutor;", assistCreateClazz);
+                CtField executor = CtField.make("private com.tomqi.aop_mask.log.executor.LogExecutor logExecutor;", assistCreateClazz);
                 FieldInfo fieldInfo = executor.getFieldInfo();
                 ConstPool constPool = fieldInfo.getConstPool();
                 Annotation autowired = new Annotation("org.springframework.beans.factory.annotation.Autowired", constPool);

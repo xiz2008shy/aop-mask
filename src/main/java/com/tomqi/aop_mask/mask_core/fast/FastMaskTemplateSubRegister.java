@@ -1,41 +1,39 @@
 package com.tomqi.aop_mask.mask_core.fast;
 
+import com.tomqi.aop_mask.Exception.NonMaskOnException;
 import com.tomqi.aop_mask.annotation.*;
 import com.tomqi.aop_mask.log.LogBodyMaker;
 import com.tomqi.aop_mask.utils.ClassScanner;
 import javassist.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.*;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.env.Environment;
-import org.springframework.core.type.MethodMetadata;
+import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author TOMQI
  * @Title: FastTemplateRegister
  * @ProjectName: aop_mask
  * @Description : FastDataMaskTemplate的注册类，初始化其所有子类
- * @data 2020/10/1823:59
+ * @data 2020/10/18 23:59
  **/
 @Component
 public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostProcessor, EnvironmentAware {
 
-    private static final Logger log               = LoggerFactory.getLogger(FastMaskTemplateSubRegister.class);
-    public static final String CORE_METHOD_NAME  = "maskData";
-    private static final String NEW_CLASS_PACKAGE = "com.tomqi.aop_mask.remark.";
-    public static final String  NEW_CLASS_SUFFIX  = "$Mask";
+    private static final Logger log = LoggerFactory.getLogger(FastMaskTemplateSubRegister.class);
+    public static final String CORE_METHOD_NAME = "maskData";
+    public static final String NEW_CLASS_PACKAGE = "com.tomqi.aop_mask.remark.";
+    public static final String NEW_CLASS_SUFFIX = "$Mask";
 
     private Environment env;
 
@@ -44,36 +42,81 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
         this.env = environment;
     }
 
-    @Autowired
-    private ApplicationContext  applicationContext;
-
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
         boolean writeClassFile = env.getProperty("Mask.writeClassFile", boolean.class, false);
-        // 查找指定class的子类或实现
-        Set<Class<?>> classes = ClassScanner.scannerAll(FastMaskTemplate.class);
-        for (Class<?> clazz : classes) {
-            rewriteMaskData(registry, writeClassFile, clazz);
-        }
-    }
+        // 用于存放@MLog标注的class集合
+        Set<Class<?>> setClass = new HashSet<>();
+        // 查找FastMaskTemplate.class的子类或实现，并添加@MLog标注的class到set集合
+        Map<String, Class<?>> classMap = ClassScanner.scannerAll(FastMaskTemplate.class, setClass);
 
-    /**
-     * 这里重写maskData方法
-     * @param registry
-     * @param writeClassFile
-     * @param clazz
-     */
-    private void rewriteMaskData(BeanDefinitionRegistry registry, boolean writeClassFile, Class<?> clazz) {
-        // 创建clazz中 影响maskData方法 的 信息收集器
-        ConversionMethodCollector collector = new ConversionMethodCollector();
-        collector.collectFromClass(clazz);
-        // 获取所有与maskDate相关的方法的方法名
-        Set<String> originMethodNames = collector.getOriginMethodNames();
+        // 接下来遍历set集合，把其中存在mask类的class去掉
+        Iterator<Class<?>> iterator = setClass.iterator();
+        while (iterator.hasNext()) {
+            Class<?> originClass = iterator.next();
+            Class<?> maskClass = classMap.get(originClass.getSimpleName());
+            if (maskClass != null) {
+                iterator.remove();
+            }
+        }
 
         ClassPool pool = new ClassPool();
         pool.insertClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));
         pool.importPackage("org.slf4j.Logger");
         pool.importPackage("org.slf4j.LoggerFactory");
+
+        try {
+            // 处理map集合,生成proxyClass，重写maskData方法
+            for (Class<?> clazz : classMap.values()) {
+                rewriteMaskDataAndRegisterBean(pool, registry, writeClassFile, clazz);
+            }
+
+            // 处理set集合中没有mask的class
+            NonMaskClassMaker.nonMaskLogClassMaker(registry, writeClassFile, setClass, pool);
+        } catch (Exception e) {
+            log.info("FastDataMaskTemplate.class加载错误!", e);
+        }
+    }
+
+
+    /**
+     * 用CtClass转化成class对象，并注册到registry
+     *
+     * @param registry           注册中心
+     * @param writeClassFileFlag 判断是否输出class到磁盘
+     * @param newCtClass         生成真实字节码的原Assist对象
+     * @throws CannotCompileException
+     * @throws IOException
+     */
+    public static void registerCtClazz(BeanDefinitionRegistry registry, boolean writeClassFileFlag, CtClass newCtClass) throws CannotCompileException, IOException {
+        if (writeClassFileFlag) {
+            newCtClass.writeFile(ClassScanner.rootPath());
+        }
+        Class<?> proxyClass = newCtClass.toClass();
+        // 定义beanDefition
+        BeanDefinitionBuilder maskBDBuilder = BeanDefinitionBuilder.genericBeanDefinition(proxyClass);
+        GenericBeanDefinition beanDefinition = (GenericBeanDefinition) maskBDBuilder.getBeanDefinition();
+
+        String simpleName = newCtClass.getSimpleName();
+        // 注册该beanDefinition
+        registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);
+        newCtClass.detach();
+    }
+
+    /**
+     * 在这里重写maskData方法，然后把bean注册到spring
+     *
+     * @param registry
+     * @param writeClassFile
+     * @param clazz
+     */
+    private void rewriteMaskDataAndRegisterBean(ClassPool pool, BeanDefinitionRegistry registry, boolean writeClassFile, Class<?> clazz) throws NonMaskOnException {
+        // 创建clazz中 影响maskData方法 的 信息收集器
+        ConversionMethodCollector collector = new ConversionMethodCollector();
+        collector.collectFromClass(clazz,registry);
+        // 获取所有与maskDate相关的方法的方法名
+        Set<String> originMethodNames = collector.getOriginMethodNames();
+
         try {
             CtClass ctClass = pool.get(clazz.getName());
             CtClass assistCreateClazz = pool
@@ -87,7 +130,7 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
 
             // 处理MLog的ALLIN模式
             if (collector.logMode == LogMode.ALLIN) {
-                LogBodyMaker.addExecuteLogForNormalMethod(ctClass,assistCreateClazz);
+                LogBodyMaker.addExecuteLogForNormalMethod(ctClass, assistCreateClazz);
             }
 
             // 构造方法
@@ -104,39 +147,26 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
             StringBuilder methodText = new StringBuilder();
             methodText.append("{\n");
             // 这里写入maskData的具体的执行代码
-            MaskBodyMaker.methodBodyCreate(originMethodNames,assistCreateClazz.getName(), methodText, collector,logFlag);
+            MaskBodyMaker.methodBodyCreate(originMethodNames, assistCreateClazz.getName(), methodText, collector, logFlag);
             methodText.append("}");
             subMaskData.setBody(methodText.toString());
             assistCreateClazz.addMethod(subMaskData);
 
-            // 生成class文件
-            if (writeClassFile) {
-                assistCreateClazz.writeFile(ClassScanner.rootPath());
-            }
-
-            Class<?> assistClazz = assistCreateClazz.toClass();
-
-            // 定义beanDefition
-            BeanDefinitionBuilder maskBDBuilder = BeanDefinitionBuilder.genericBeanDefinition(assistClazz);
-            GenericBeanDefinition beanDefinition = (GenericBeanDefinition) maskBDBuilder.getBeanDefinition();
-
-            String simpleName = assistClazz.getSimpleName();
-            // 注册该beanDefinition
-            registry.registerBeanDefinition(StringUtils.uncapitalize(simpleName), beanDefinition);
-
+            registerCtClazz(registry, writeClassFile, assistCreateClazz);
             ctClass.detach();
-            assistCreateClazz.detach();
         } catch (Exception e) {
             log.info("FastDataMaskTemplate子类加载错误!", e);
         }
     }
+
+
 
     /**
      * MethodNode-方法中的重要信息用此对象封装
      */
     static class MethodNode {
         String methodName;
-        int    order;
+        int order;
 
         private static MethodNode convertToNode(String methodName, int order) {
             MethodNode node = new MethodNode();
@@ -152,7 +182,7 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
     static class HandleTimingContainer {
         private MethodNode[] methodNodes;
 
-        private int          length;
+        private int length;
 
         private HandleTimingContainer() {
             this.methodNodes = new MethodNode[16];
@@ -213,18 +243,18 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
      * 包含一个方法所有TimeNode下的所有MethodNode
      */
     private class TimingContainer {
-        private HandleTimingContainer[] containers       = new HandleTimingContainer[5];
+        private HandleTimingContainer[] containers = new HandleTimingContainer[5];
         /**
          * 判断当前template是否重写过handle节点
          */
-        private boolean                 hasHandleTiming  = false;
+        private boolean hasHandleTiming = false;
 
         /**
          * 代表当前template的handle节点是否被处理过
          */
-        private boolean                 isHandleDone     = false;
+        private boolean isHandleDone = false;
 
-        private int                     handleNodeLength = 0;
+        private int handleNodeLength = 0;
 
     }
 
@@ -238,23 +268,33 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
 
         private Map<String, TimingContainer> originMethodNameMap = new HashMap<>();
 
-        protected int                        curTiming           = 0;
+        protected int curTiming = 0;
 
-        protected int                        curNodeIndex        = 0;
+        protected int curNodeIndex = 0;
 
-        protected String                     curMethod           = "";
+        protected String curMethod = "";
 
-        protected TimingContainer            curContainer;
+        protected TimingContainer curContainer;
 
-        protected boolean                    isHandleFinish      = false;
+        protected boolean isHandleFinish = false;
 
-        private LogMode                      logMode             = LogMode.OFF;
+        private LogMode logMode = LogMode.OFF;
 
-        protected void collectFromClass(Class<?> clazz) {
-            MLog mLogAnn = AnnotationUtils.findAnnotation(clazz, MLog.class);
-            if (mLogAnn != null) {
-                this.logMode = mLogAnn.logMode();
+
+        protected void collectFromClass(Class<?> clazz,BeanDefinitionRegistry registry) throws NonMaskOnException {
+            MaskOn maskOn = AnnotationUtils.findAnnotation(clazz, MaskOn.class);
+            if (maskOn == null) {
+                throw new NonMaskOnException("缺少@MaskOn注解!");
             }
+
+            String maskedClass = StringUtils.uncapitalize(maskOn.value());
+            AnnotatedBeanDefinition beanDefinition = (AnnotatedBeanDefinition)registry.getBeanDefinition(maskedClass);
+            AnnotationMetadata metadata = beanDefinition.getMetadata();
+            Map<String, Object> attr = metadata.getAnnotationAttributes("com.tomqi.aop_mask.annotation.MLog");
+            if (attr != null && !attr.isEmpty()){
+                this.logMode = (LogMode)attr.get("logMode");
+            }
+
             Method[] clazzMethods = clazz.getDeclaredMethods();
             // 遍历所有method，收集有效信息
             for (Method method : clazzMethods) {
@@ -327,7 +367,7 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
         }
 
         private boolean findNextNode(TimingContainer timingContainer) {
-            for (;;) {
+            for (; ; ) {
 
                 if (this.curTiming > 4) {
                     return false;
@@ -358,12 +398,12 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
 
         /**
          * 获取下一个非handle节点的MethodNode，有返回true，否者返回false表示当前TimeNode已遍历完，false不代表没有下一个节点
-         * 
+         *
          * @param container
          * @return
          */
         private boolean getNextNode(HandleTimingContainer container) {
-            for (;;) {
+            for (; ; ) {
                 if (this.curNodeIndex < container.length) {
                     return true;
                 } else {
@@ -375,7 +415,7 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
 
         /**
          * 处理handleNode节点，如果存在就返回true，否则返回false，而false表示不存在未处理的handleMethod，不代表没有下一个节点
-         * 
+         *
          * @param timingContainer
          * @return
          */
@@ -453,16 +493,6 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
 
     }
 
-    private MethodMetadata findMethodMetadata(Set<MethodMetadata> annotatedMethods, String originMethodName) {
-        Iterator<MethodMetadata> iterator = annotatedMethods.iterator();
-        while (iterator.hasNext()) {
-            MethodMetadata md = iterator.next();
-            if (md.getMethodName().equals(originMethodName)) {
-                return md;
-            }
-        }
-        return null;
-    }
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
