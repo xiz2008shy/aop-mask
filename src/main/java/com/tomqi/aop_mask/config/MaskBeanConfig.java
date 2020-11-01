@@ -1,5 +1,6 @@
 package com.tomqi.aop_mask.config;
 
+import com.tomqi.aop_mask.config.condition.CustomerLogCondition;
 import com.tomqi.aop_mask.container.MValidatorHandlerContainer;
 import com.tomqi.aop_mask.container.MaskContainer;
 import com.tomqi.aop_mask.log.executor.impl.AsyncLogExecutor;
@@ -8,10 +9,8 @@ import com.tomqi.aop_mask.log.LogThreadFactory;
 import com.tomqi.aop_mask.log.executor.impl.SyncLogExecutor;
 import com.tomqi.aop_mask.utils.TimeUnitUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.EnableAspectJAutoProxy;
-import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -31,6 +30,9 @@ public class MaskBeanConfig {
     @Autowired
     private Environment env;
 
+    @Autowired
+    private ApplicationContext applicationContext;
+
     @Bean(initMethod = "initContainer")
     public MaskContainer maskingStrategies() {
         return new MaskContainer();
@@ -42,9 +44,10 @@ public class MaskBeanConfig {
     }
 
     @Bean
+    @Conditional(CustomerLogCondition.class)
     public LogExecutor logExecutor() {
 
-         boolean isAsync = env.getProperty("LogExecutor.isAsync", boolean.class ,false);
+        boolean isAsync = env.getProperty("LogExecutor.isAsync", boolean.class ,false);
          if (isAsync) {
              int corePoolSize = env.getProperty("LogExecutor.corePoolSize", int.class, 1);
 

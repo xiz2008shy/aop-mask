@@ -1,7 +1,9 @@
 package com.tomqi.aop_mask.utils;
 
 import com.tomqi.aop_mask.annotation.MLog;
+import com.tomqi.aop_mask.annotation.MValid;
 import com.tomqi.aop_mask.annotation.MaskOn;
+import org.springframework.core.annotation.AnnotationUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,7 +63,7 @@ public class ClassScanner {
             if (filterClass.isAssignableFrom(clazz) && !clazz.equals(filterClass)) {
                 MaskOn maskOn = clazz.getAnnotation(MaskOn.class);
                 clazzMap.put(maskOn.value(),clazz);
-            }else if (clazz.getAnnotation(MLog.class) != null) {
+            }else if (AnnotationUtils.findAnnotation(clazz,MLog.class) != null || AnnotationUtils.findAnnotation(clazz,MValid.class) != null) {
                 classSet.add(clazz);
             }
         } catch (ClassNotFoundException e) {

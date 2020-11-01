@@ -46,6 +46,12 @@ public class MaskBodyMaker {
                 }
                 methodText.append("break;\n");
             }
+
+            // 添加default分支
+            methodText.append("default:\n")
+                .append("$1.setJoinPoint(com.tomqi.aop_mask.utils.MaskContext.getPoint());\n")
+                .append("handle($1);\n")
+                .append("$1.setJoinPoint(null);\n");
             methodText.append("}\n");
         }
         if (log) {

@@ -1,7 +1,10 @@
 package com.tomqi.demo.controller;
 
 import com.tomqi.aop_mask.annotation.MLog;
+import com.tomqi.aop_mask.annotation.MValid;
 import com.tomqi.aop_mask.annotation.Masking;
+import com.tomqi.aop_mask.annotation.Validator;
+import com.tomqi.aop_mask.validation.validator.NotBlank;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("fastHello")
 @MLog
+@MValid
 public class FastDemoController {
 
     private static final Logger log = LoggerFactory.getLogger(FastDemoController.class);
@@ -52,13 +56,14 @@ public class FastDemoController {
 
 
     /**
-     * http://localhost:8080/fastHello/async
+     * http://localhost:8080/fastHello/async?input=666
      * @return
      */
+    @Masking({@Validator(validBy = NotBlank.class)})
     @RequestMapping("async")
-    public ResponseEntity<String> asycnTest(){
-        System.out.println("开始asycnTest");
-        return ResponseEntity.ok("执行完成");
+    public ResponseEntity<String> asycnTest(@RequestParam("input") String input){
+        System.out.println("开始asycnTest--->"+input);
+        return ResponseEntity.ok("执行完成--->"+input);
     }
 
 }

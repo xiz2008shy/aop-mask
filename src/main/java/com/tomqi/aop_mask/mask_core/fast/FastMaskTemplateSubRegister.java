@@ -313,7 +313,7 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
             MTiming mTimingAnn = AnnotationUtils.findAnnotation(method, MTiming.class);
             TimeNode timing = maskMethodAnn.timing();
             int order = maskMethodAnn.order();
-            // 如果存在@MTiming注解，则的@MTiming注解的属性为准
+            // 如果存在@MTiming注解，则以@MTiming注解的属性为准
             if (mTimingAnn != null) {
                 timing = mTimingAnn.value();
                 order = mTimingAnn.order();
