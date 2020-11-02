@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 @Configuration
 @EnableAspectJAutoProxy
-@PropertySource(value = "classpath:AOP_MaskOption.properties")
+@PropertySource(value = "classpath:AOP_MaskOption.properties",ignoreResourceNotFound = true)
 public class MaskBeanConfig {
 
     @Autowired

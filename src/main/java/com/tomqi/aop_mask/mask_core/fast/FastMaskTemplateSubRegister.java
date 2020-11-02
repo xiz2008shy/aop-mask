@@ -135,8 +135,7 @@ public class FastMaskTemplateSubRegister implements BeanDefinitionRegistryPostPr
 
             // 构造方法
             CtConstructor ctConstructor = new CtConstructor(new CtClass[0], assistCreateClazz);
-            ctConstructor.setBody(
-                    "{ System.out.println(\"success create " + assistCreateClazz.getSimpleName() + "!\");}");
+            ctConstructor.setBody("{}");
             assistCreateClazz.addConstructor(ctConstructor);
 
             // 准备重写maskData方法
