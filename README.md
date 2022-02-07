@@ -3,7 +3,7 @@ A Spring AOP extension
 
 AopMask主要作用是对目标方法进行快速增强，是基于springAop的扩展，颗粒度是方法级别的。
 允许在方法执行前后，进行额外操作，也支持对原本方法执行进行操控。
->The main function of AopMask is to quickly enhance the target method, which is based on the extension of springAop, and the granularity is method level.
+>The main functionality of AopMask is to quickly enhance the target method, which is based on the extension of springAop, and the granularity is method level.
 Allows for additional operations before and after the method is executed, and also supports manipulation of the original method execution.
 
 开启AopMask，会将一个方法分割成5个顺序执行节点
