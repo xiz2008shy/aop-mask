@@ -2,9 +2,9 @@
 A Spring AOP extension
 
 AopMask主要作用是对目标方法进行快速增强，是基于springAop的扩展，颗粒度是方法级别的。
-允许在方法执行前后，进行额外操作，也支持对原本方法执行进行操控。
+允许在方法执行前后，进行额外操作。
 >The main functionality of AopMask is to quickly enhance the target method, which is based on the extension of springAop, and the granularity is method level.
-Allows for additional operations before and after the method is executed, and also supports manipulation of the original method execution.
+Allows for additional operations before and after the method is executed.
 
 开启AopMask，会将一个方法分割成5个顺序执行节点
 BEFORE_PRE_HANDLE -> PRE_HANDLE -> HANDLE -> POST_HANDLE -> AFTER_POST_HANDLE
@@ -14,7 +14,7 @@ AopMask使用时通常在BEFORE_PRE_HANDLE，PRE_HANDLE，POST_HANDLE，AFTER_PO
 >Turn on AopMask, and a method will be divided into 5 sequential execution nodes
  BEFORE_PRE_HANDLE -> PRE_HANDLE -> HANDLE -> POST_HANDLE -> AFTER_POST_HANDLE <br>
  The original target method will be executed in the HANDLE node.
- When AopMask is used, it usually operates in four nodes: BEFORE_PRE_HANDLE, PRE_HANDLE, POST_HANDLE, AFTER_POST_HANDLE, and the HANDLE node is usually unchanged.
+ In AopMask, it usually operates in four nodes: BEFORE_PRE_HANDLE, PRE_HANDLE, POST_HANDLE, AFTER_POST_HANDLE, and the HANDLE node is usually unchanged.
 
 
 新增功能 new features
@@ -28,7 +28,7 @@ AopMask使用时通常在BEFORE_PRE_HANDLE，PRE_HANDLE，POST_HANDLE，AFTER_PO
 多个效验器之间为短路处理，即当前效验器如果验证失败将不再调用后续效验器（如果有）验证。
 效验器可以拿到方法形参和对应的@Validator注解对象，具有一些常用的字段，方便扩展效验器的使用。
 
->By inheriting the AbstractMaskValidator class and overriding the valid method, specific validation logic is realized.
+>By inheriting the AbstractMaskValidator class and overriding the valid method, you can implement your logic simply .
  Support the independent use of validation module.
  Support multi-validator declaration processing, you can specify the order of execution between validators.
  There is a short-circuit process between multiple validators, that is, if the current validator fails to verify, the subsequent validators (if any) will not be called for verification.
